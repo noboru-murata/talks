@@ -1,0 +1,14 @@
+講演資料 (スライド，配布用 PDF，解説文，図)
+Copyright (c) 2026 村田 昇 (Noboru Murata)
+
+この資料は Creative Commons 表示 - 非営利 4.0 国際 (CC BY-NC 4.0) で提供する．
+This work is licensed under the Creative Commons Attribution-NonCommercial 4.0
+International License.
+
+  概要: https://creativecommons.org/licenses/by-nc/4.0/deed.ja
+  条文: https://creativecommons.org/licenses/by-nc/4.0/legalcode
+
+対象外:
+  - コード (デモの html に含まれるスクリプト，tools/) は MIT．LICENSE-CODE を見よ．
+  - 埋め込まれた第三者の部品 (reveal.js，MathJax，フォントなど) は，それぞれ元のライセンスに従う．
+  - 他の文献から引用した図は，その出典の権利者に属する．

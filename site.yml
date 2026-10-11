@@ -1,0 +1,5 @@
+# 一覧ページ (index.html) の題と説明．tools/build-index.py が読む
+title: 講演資料
+description: 村田 昇の講演のスライド・配布用 PDF・解説文・デモ
+lang: ja
+footer: 資料は CC BY-NC 4.0，コードは MIT (README)．
