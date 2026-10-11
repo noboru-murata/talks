@@ -8,6 +8,18 @@
 三者の取り決めである．どの作業からも手元のファイルとして読めるよう，ここに置く．
 決定: 2026-10-11．
 
+## 0. 場所
+
+| | |
+|---|---|
+| 手元 | `~/Desktop/projects/talks/` (講演のリポジトリと同じ階層．publish.mk の既定 `PUB_ROOT = ../../talks`) |
+| GitHub | https://github.com/noboru-murata/talks (public．main の / を Pages で公開) |
+| 公開の URL | https://noboru-murata.github.io/talks/ (一覧)，講演は `…/talks/<id>/talk/<id>.html` |
+| 共通の部品 | `~/Desktop/projects/ox-quarto/tools/` (publish.mk，oxq-publish.py，oxq-pdf.py --no-notes) |
+
+講演で見せる URL や QR コードは，`https://noboru-murata.github.io/talks/<id>/talk/<id>.html`
+(またはその一覧の `…/talks/#<id>`) にする．push すると 1〜2 分で反映される．
+
 ## 1. 並び
 
     talks/
