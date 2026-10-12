@@ -119,6 +119,7 @@ include $(OXQ)/tools/publish.mk
 | `make publish-diff` / `make publish-edition-diff` | 調べたうえで，変わる所を表示するだけ |
 | `make publish-check` / `make publish-edition-check` | 仮置き場 (`_publish/`) に集めて調べるだけ |
 | `make <名前>-handout.pdf` | ノートなしの配布用 PDF (`oxq-pdf.py --no-notes`．並べ方は `PUB_HANDOUT_OPTS`) |
+| `make publish-qr` | 版の頁の URL (`PUB_URL_BASE/PUB_ID/PUB_EDITION/`) の QR コードを `PUB_QR` (既定 `figs/qr-edition.svg`) に作り，org に貼る `#+QUARTO_QR` の 2 行を表示する．公開の前に使える |
 
 どれも最後に `index.html` (一覧・主題・版の頁) を作り直す．そのあと talks で `git diff` を見て，
 ユーザーが commit と push をする．並列 (`make -j`) では動かさない．
