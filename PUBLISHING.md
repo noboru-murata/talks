@@ -13,10 +13,10 @@
 
 | | |
 |---|---|
-| 手元 | `~/Desktop/projects/talks/` (講演のリポジトリと同じ階層．publish.mk の既定 `PUB_ROOT = ../../talks`) |
+| 手元 | `~/Desktop/claude/talks/` (講演のリポジトリと同じ階層．publish.mk の既定 `PUB_ROOT = ../../talks`) |
 | GitHub | https://github.com/noboru-murata/talks (public．main の / を Pages で公開) |
 | 公開の URL | https://noboru-murata.github.io/talks/ (主題の一覧) |
-| 共通の部品 | `~/Desktop/projects/ox-quarto/tools/` (publish.mk，oxq-publish.py，oxq-pdf.py --no-notes) |
+| 共通の部品 | `~/Desktop/claude/ox-quarto/tools/` (publish.mk，oxq-publish.py，oxq-pdf.py --no-notes) |
 
 push すると 1〜2 分で反映される．
 
