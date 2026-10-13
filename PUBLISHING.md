@@ -170,6 +170,7 @@ talks で `make check` を実行すると，すべての主題とその中の版
 1. **許可リスト**: 公開してよい拡張子は html・pdf・css・js・json・yml・画像・フォント・動画だけ．
    org・qmd・tex・bib・R・py・ipynb・csv などのデータやコードはそもそも通らない．
 2. **禁止するパス**: `waseda` を含む名前，`_quarto/`，`local/`，`notes/`，隠しファイル，シンボリックリンク．
+   ただし Finder が作る `.DS_Store` は `.gitignore` で除いてあり公開されないので，調べない．
 3. **ロゴ**: `_quarto/local/` の画像 (校章など．商標) が埋め込まれていないか，base64 の断片で照合する．
 4. **手元の情報**: `/Users/…` などの絶対パス，`file://`・`localhost` へのリンク (html・css・js・PDF の文書情報)．
 5. **発表者ノート** (`publish.notes: false` のとき): html に `<aside class="notes">` が残っていないこと

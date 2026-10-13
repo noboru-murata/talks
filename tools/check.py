@@ -60,6 +60,8 @@ NOTES_RE = re.compile(r'<aside\b[^>]*class="[^"]*\bnotes\b')
 CHARSET_RE = re.compile(r"""<meta\b[^>]*\bcharset\s*=|<meta\b[^>]*http-equiv\s*=\s*["']?content-type""", re.I)
 DOCTYPE_RE = re.compile(r"^\s*(?:<!--.*?-->\s*)*<!doctype\s+html", re.I | re.S)
 GENERATOR = "talks/tools/build-index.py"     # build-index が作る頁 (参照の検査はしない)
+# macOS の Finder がフォルダを開くと作るファイル．.gitignore で除いてあり公開されないので，調べない
+OS_JUNK = {".DS_Store"}
 SIZE_WARN = 50 * 2**20
 SIZE_ERROR = 95 * 2**20      # GitHub の上限は 1 ファイル 100MB
 
@@ -215,7 +217,7 @@ def check_files(root: Path, meta: dict, is_topic: bool, logos, snippets: list[st
         rel = p.relative_to(root).as_posix()
         if is_topic and rel.split("/", 1)[0] in edition_dirs:
             continue                                  # 版は別に調べる
-        if p.is_dir():
+        if p.is_dir() or p.name in OS_JUNK:
             continue
         n += 1
         if p.is_symlink():
