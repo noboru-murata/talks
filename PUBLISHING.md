@@ -118,7 +118,7 @@ include $(OXQ)/tools/publish.mk
 | `make publish-all` | 上の 2 つを続けて (初めての公開と講演の当日に)．主題がまだ無いと `publish-edition` は止まる |
 | `make publish-diff` / `make publish-edition-diff` | 調べたうえで，変わる所を表示するだけ |
 | `make publish-check` / `make publish-edition-check` | 仮置き場 (`_publish/`) に集めて調べるだけ |
-| `make <名前>-handout.pdf` | ノートなしの配布用 PDF (`oxq-pdf.py --no-notes`．並べ方は `PUB_HANDOUT_OPTS`) |
+| `make <名前>-handout.pdf` | ノートなしの配布用 PDF (`oxq-pdf.py --no-notes`．既定は 1 頁 6 枚 (3 段 × 2 列)．org の `#+QUARTO_OPTIONS: handout-grid:4x2` (段x列) で変えられ，`PUB_HANDOUT_OPTS` (例 `--grid 4x2`，`--per-page 4`) が優先) |
 | `make talk-handout` | 同じものを短い名前で．対象は `PUB_EDITION_FILES` の左側の `*-handout.pdf` (`PUB_HANDOUT=…` で変えられる)．ノート付きの `talk-notes` と対 |
 | `make publish-qr` | 版の頁の URL (`PUB_URL_BASE/PUB_ID/PUB_EDITION/`) の QR コードを `PUB_QR` (既定 `figs/qr-edition.svg`) に作り，org に貼る `#+QUARTO_QR` の 2 行を表示する．公開の前に使える |
 
