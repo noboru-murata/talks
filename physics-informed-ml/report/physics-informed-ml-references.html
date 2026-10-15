@@ -1,0 +1,447 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>解説文の文献ガイド</title>
+<script>window.MathJax={tex:{inlineMath:[['\\(','\\)']]},chtml:{scale:0.95}};</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-chtml.js"></script>
+<style>
+:root{--bg:#F6F8F7;--card:#fff;--ink:#1d2421;--muted:#5f6b66;--line:#dfe5e2;--acc:#0B7558;--acc2:#0072B2;--eq:#F1F5F3}
+@media (prefers-color-scheme:dark){:root{--bg:#141917;--card:#1c2320;--ink:#e6ece9;--muted:#9aa8a2;--line:#2c3532;--acc:#4cc39b;--acc2:#5fb0e6;--eq:#222b28}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.7 "Hiragino Sans","Noto Sans JP",sans-serif}
+header{position:sticky;top:0;z-index:2;background:var(--bg);border-bottom:1px solid var(--line);padding:12px 16px}
+header h1{font-size:18px;margin:0 0 6px}header .sub{color:var(--muted);font-size:13px}
+#q{width:100%;max-width:420px;padding:6px 10px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--ink);margin-top:6px}
+.wrap{display:grid;grid-template-columns:240px 1fr;gap:24px;max-width:1180px;margin:0 auto;padding:16px}
+nav{position:sticky;top:110px;align-self:start;font-size:13px}nav a{display:block;color:var(--ink);text-decoration:none;padding:4px 0;border-bottom:1px dotted var(--line)}
+nav a:hover{color:var(--acc)}.cnt{color:var(--muted)}
+article,h2{scroll-margin-top:130px}
+h2{font-size:16px;color:var(--acc);margin:28px 0 8px;border-bottom:2px solid var(--acc);padding-bottom:2px}
+article{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px 16px;margin:10px 0}
+.meta{font-weight:600}.no{display:inline-block;min-width:2em;color:var(--muted);font-weight:400}.yr{color:var(--muted);font-weight:400}
+.ti{font-size:15.5px;margin:2px 0}.ve{color:var(--muted);font-style:italic;font-size:13.5px}
+.links{font-size:13px;margin:4px 0 6px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.links a{color:var(--acc2)}.links a.pdf{font-weight:700}.links a.gone{color:#B23F33}
+.where{color:var(--muted)}.key{color:var(--muted);font-size:11.5px;margin-left:auto}
+article p{margin:6px 0}.eq{background:var(--eq);border-radius:6px;padding:2px 10px;margin:6px 0;overflow-x:auto}
+@media (max-width:760px){.wrap{grid-template-columns:1fr}nav{position:static}.key{margin-left:0}}
+</style></head><body>
+<header><h1>解説文「物理を組み込む機械学習」の文献ガイド</h1>
+<div class="sub">57 件．講演の解説文で引いた文献について，引いた理由と主な式をまとめたもの．節の番号は解説文の節．式は解説文の記法に合わせて書き直した抜粋で，原論文の記法とは異なる．文案は生成 AI (Claude) で作り，著者が確かめた．正確な内容は原論文で確かめてほしい．</div>
+<input id="q" type="search" placeholder="絞り込み (著者・題・語)"></header>
+<div class="wrap"><nav><a href="#g1">1 はじめに: フィジカル AI と PIML <span class="cnt">6</span></a>
+<a href="#g2">2 物理の入れ方: 3 つのバイアスと正則化 <span class="cnt">10</span></a>
+<a href="#g3">3 バイアスを実現する技術 <span class="cnt">23</span></a>
+<a href="#g4">4 事例研究: 制約付き曲線の設計 <span class="cnt">5</span></a>
+<a href="#g5">5 古典的な数値解析との使い分け <span class="cnt">2</span></a>
+<a href="#g6">6 課題と展望 <span class="cnt">8</span></a>
+<a href="#g7">7 研究の歩み (年表) <span class="cnt">3</span></a></nav><main>
+<h2 id="g1">1 はじめに: フィジカル AI と PIML</h2>
+<article id="Miriyev_Kovac_2020_SkillsPhysicalArtificial" data-s="miriyev, a.; kovač, m. skills for physical artificial intelligence 「フィジカル ai」を学術的な概念として提唱した論文．材料科学・機械工学・計算機科学・生物学の技能を融合して，生命のような知能を持つロボットを合成する理論と実践と位置付ける．解説文の冒頭でフィジカル ai の定義の出所として引いた． miriyev_kovac_2020_skillsphysicalartificial">
+<div class="meta"><span class="no">1</span><span class="au">Miriyev, A.; Kovač, M.</span> <span class="yr">(2020)</span></div>
+<div class="ti">Skills for Physical Artificial Intelligence</div>
+<div class="ve">Nature Machine Intelligence, 2, 658–660</div>
+<div class="links"><a href="https://doi.org/10.1038/s42256-020-00258-y">doi:10.1038/s42256-020-00258-y</a><span class="where">解説文 1.1 · スライド</span><code class="key">Miriyev_Kovac_2020_SkillsPhysicalArtificial</code></div>
+<p>「フィジカル AI」を学術的な概念として提唱した論文．材料科学・機械工学・計算機科学・生物学の技能を融合して，生命のような知能を持つロボットを合成する理論と実践と位置付ける．解説文の冒頭でフィジカル AI の定義の出所として引いた．</p>
+</article>
+<article id="Thakur_etal_2025_PhysicalArtificialIntelligence" data-s="thakur, a.; kaipa, k.; banerjee, a. g.; cappelleri, d. j.; krovi, v. n.; gupta, s. physical artificial intelligence for powering the next revolution in robotics フィジカル ai をロボティクスの次の段階として工学的に体系化したレビュー．知覚・推論・行動・学習の要素と，シミュレーションと実機をつなぐ計算基盤を整理している．解説文では「工学的な体系化」の参照先として引いた． thakur_etal_2025_physicalartificialintelligence">
+<div class="meta"><span class="no">2</span><span class="au">Thakur, A.; Kaipa, K.; Banerjee, A. G.; Cappelleri, D. J.; Krovi, V. N.; Gupta, S.</span> <span class="yr">(2025)</span></div>
+<div class="ti">Physical Artificial Intelligence for Powering the Next Revolution in Robotics</div>
+<div class="ve">Journal of Computing and Information Science in Engineering, 25, 120809</div>
+<div class="links"><a href="https://doi.org/10.1115/1.4070122">doi:10.1115/1.4070122</a><span class="where">解説文 1.1 · スライド</span><code class="key">Thakur_etal_2025_PhysicalArtificialIntelligence</code></div>
+<p>フィジカル AI をロボティクスの次の段階として工学的に体系化したレビュー．知覚・推論・行動・学習の要素と，シミュレーションと実機をつなぐ計算基盤を整理している．解説文では「工学的な体系化」の参照先として引いた．</p>
+</article>
+<article id="Cuomo_etal_2022_ScientificMachineLearning" data-s="cuomo, s.; di cola, v. s.; giampaolo, f.; rozza, g.; raissi, m.; piccialli, f. scientific machine learning through physics–informed neural networks: where we are and what’s next pinn の包括的なサーベイ．損失の構成，学習器の構造，応用分野，理論的な結果を網羅する．解説文では pinn 全般の参照先として挙げた． cuomo_etal_2022_scientificmachinelearning">
+<div class="meta"><span class="no">3</span><span class="au">Cuomo, S.; Di Cola, V. S.; Giampaolo, F.; Rozza, G.; Raissi, M.; Piccialli, F.</span> <span class="yr">(2022)</span></div>
+<div class="ti">Scientific Machine Learning Through Physics–Informed Neural Networks: Where We Are and What’s Next</div>
+<div class="ve">Journal of Scientific Computing, 92, 88</div>
+<div class="links"><a href="https://doi.org/10.1007/s10915-022-01939-z">doi:10.1007/s10915-022-01939-z</a><span class="where">解説文 1.3</span><code class="key">Cuomo_etal_2022_ScientificMachineLearning</code></div>
+<p>PINN の包括的なサーベイ．損失の構成，学習器の構造，応用分野，理論的な結果を網羅する．解説文では PINN 全般の参照先として挙げた．</p>
+</article>
+<article id="Karniadakis_etal_2021_PhysicsinformedMachineLearning" data-s="karniadakis, g. e.; kevrekidis, i. g.; lu, l.; perdikaris, p.; wang, s.; yang, l. physics-informed machine learning piml の代表的なレビュー (nature reviews physics)．物理の入れ方を観測バイアス・帰納バイアス・学習バイアスの 3 つに分類した．解説文の 2 節はこの分類を出発点に，3 つのバイアスが古典的な学習の枠組みの 3 つの部分 (データ・正則化・仮説空間) に対応することを示す． karniadakis_etal_2021_physicsinformedmachinelearning">
+<div class="meta"><span class="no">4</span><span class="au">Karniadakis, G. E.; Kevrekidis, I. G.; Lu, L.; Perdikaris, P.; Wang, S.; Yang, L.</span> <span class="yr">(2021)</span></div>
+<div class="ti">Physics-Informed Machine Learning</div>
+<div class="ve">Nature Reviews Physics, 3, 422–440</div>
+<div class="links"><a href="https://doi.org/10.1038/s42254-021-00314-5">doi:10.1038/s42254-021-00314-5</a><span class="where">解説文 1.3, 2.1 · スライド</span><code class="key">Karniadakis_etal_2021_PhysicsinformedMachineLearning</code></div>
+<p>PIML の代表的なレビュー (Nature Reviews Physics)．物理の入れ方を観測バイアス・帰納バイアス・学習バイアスの 3 つに分類した．解説文の 2 節はこの分類を出発点に，3 つのバイアスが古典的な学習の枠組みの 3 つの部分 (データ・正則化・仮説空間) に対応することを示す．</p><div class="eq">\[\min_{f\in\mathcal{F}}\ \underbrace{\frac{1}{n_d}\sum_{k=1}^{n_d}\ell\bigl(f(x_k),y_k\bigr)}_{\text{観測バイアス}}+\lambda\,\underbrace{\mathcal{R}[f]}_{\text{学習バイアス}},\qquad \underbrace{\mathcal{F}}_{\text{帰納バイアス}}\]</div>
+</article>
+<article id="Kovachki_etal_2023_NeuralOperatorLearning" data-s="kovachki, n.; li, z.; liu, b.; azizzadenesheli, k.; bhattacharya, k.; stuart, a.; anandkumar, a. neural operator: learning maps between function spaces with applications to pdes neural operator (no) の体系的な解説 (jmlr)．積分作用素の核を学ぶ層を積み重ねる一般形と，その万能近似を示し，gno・fno などをその特殊例として位置付ける．解説文では「条件から解への写像を学ぶネットワーク」を no と呼ぶ根拠にした． kovachki_etal_2023_neuraloperatorlearning">
+<div class="meta"><span class="no">5</span><span class="au">Kovachki, N.; Li, Z.; Liu, B.; Azizzadenesheli, K.; Bhattacharya, K.; Stuart, A.; Anandkumar, A.</span> <span class="yr">(2023)</span></div>
+<div class="ti">Neural Operator: Learning Maps Between Function Spaces With Applications to PDEs</div>
+<div class="ve">Journal of Machine Learning Research, 24, 1–97</div>
+<div class="links"><a href="http://jmlr.org/papers/v24/21-1524.html">URL</a><span class="where">解説文 1.3, 3.8, 3.9</span><code class="key">Kovachki_etal_2023_NeuralOperatorLearning</code></div>
+<p>Neural Operator (NO) の体系的な解説 (JMLR)．積分作用素の核を学ぶ層を積み重ねる一般形と，その万能近似を示し，GNO・FNO などをその特殊例として位置付ける．解説文では「条件から解への写像を学ぶネットワーク」を NO と呼ぶ根拠にした．</p><div class="eq">\[v_{l+1}(x)=\sigma\Bigl(W_l\,v_l(x)+\int_D \kappa_{\theta,l}(x,y)\,v_l(y)\,dy\Bigr),\qquad u_\theta=\mathcal{G}_\theta[a]\]</div>
+</article>
+<article id="Willard_etal_2022_IntegratingScientificKnowledge" data-s="willard, j.; jia, x.; xu, s.; steinbach, m.; kumar, v. integrating scientific knowledge with machine learning for engineering and environmental systems 工学・環境分野で科学知識と機械学習を統合する方法のサーベイ (acm computing surveys)．物理を損失・初期化・構造・ハイブリッド模型に入れる方法を目的別に分類する．解説文では工学寄りの概観として挙げた． willard_etal_2022_integratingscientificknowledge">
+<div class="meta"><span class="no">6</span><span class="au">Willard, J.; Jia, X.; Xu, S.; Steinbach, M.; Kumar, V.</span> <span class="yr">(2022)</span></div>
+<div class="ti">Integrating Scientific Knowledge with Machine Learning for Engineering and Environmental Systems</div>
+<div class="ve">ACM Computing Surveys, 55, 66:1–66:37</div>
+<div class="links"><a href="https://doi.org/10.1145/3514228">doi:10.1145/3514228</a><span class="where">解説文 1.3</span><code class="key">Willard_etal_2022_IntegratingScientificKnowledge</code></div>
+<p>工学・環境分野で科学知識と機械学習を統合する方法のサーベイ (ACM Computing Surveys)．物理を損失・初期化・構造・ハイブリッド模型に入れる方法を目的別に分類する．解説文では工学寄りの概観として挙げた．</p>
+</article>
+<h2 id="g2">2 物理の入れ方: 3 つのバイアスと正則化</h2>
+<article id="Brunton_etal_2016_DiscoveringGoverningEquations" data-s="brunton, s. l.; proctor, j. l.; kutz, j. n. discovering governing equations from data by sparse identification of nonlinear dynamical systems sindy: 候補となる関数の辞書 θ(x) から疎回帰で支配方程式の項を選び，データから方程式そのものを発見する．解説文では piml の重要な一分野だが本稿では扱わない方向として触れた． brunton_etal_2016_discoveringgoverningequations">
+<div class="meta"><span class="no">7</span><span class="au">Brunton, S. L.; Proctor, J. L.; Kutz, J. N.</span> <span class="yr">(2016)</span></div>
+<div class="ti">Discovering Governing Equations from Data by Sparse Identification of Nonlinear Dynamical Systems</div>
+<div class="ve">Proceedings of the National Academy of Sciences, 113, 3932–3937</div>
+<div class="links"><a href="https://doi.org/10.1073/pnas.1517384113">doi:10.1073/pnas.1517384113</a><span class="where">解説文 2.1</span><code class="key">Brunton_etal_2016_DiscoveringGoverningEquations</code></div>
+<p>SINDy: 候補となる関数の辞書 Θ(X) から疎回帰で支配方程式の項を選び，データから方程式そのものを発見する．解説文では PIML の重要な一分野だが本稿では扱わない方向として触れた．</p><div class="eq">\[\dot X=\Theta(X)\,\Xi,\qquad \Xi\ \text{は疎 (逐次しきい値の最小二乗)}\]</div>
+</article>
+<article id="Mitchell_1997_MachineLearning" data-s="mitchell, t. machine learning 機械学習の古典的な教科書．観測していない入力に汎化するために学習器が置く仮定を「帰納バイアス」と定義した．解説文では 3 つのバイアスの「バイアス」の意味の出所として引いた． mitchell_1997_machinelearning">
+<div class="meta"><span class="no">8</span><span class="au">Mitchell, T.</span> <span class="yr">(1997)</span></div>
+<div class="ti">Machine Learning</div>
+<div class="ve">McGraw-Hill</div>
+<div class="links"><a href="https://books.google.co.jp/books?id=EoYBngEACAAJ">URL</a><span class="where">解説文 2.2</span><code class="key">Mitchell_1997_MachineLearning</code></div>
+<p>機械学習の古典的な教科書．観測していない入力に汎化するために学習器が置く仮定を「帰納バイアス」と定義した．解説文では 3 つのバイアスの「バイアス」の意味の出所として引いた．</p>
+</article>
+<article id="Barron_1993_UniversalApproximationBounds" data-s="barron, a. universal approximation bounds for superpositions of a sigmoidal function フーリエ変換の 1 次モーメント \(c_f\) が有限な関数なら，n ユニットのシグモイドネットワークの 2 乗誤差が次元によらず o(1/n) で減ることを示した．解説文では近似のレートと次元の呪いの議論として引いた (barron 空間)． barron_1993_universalapproximationbounds">
+<div class="meta"><span class="no">9</span><span class="au">Barron, A.</span> <span class="yr">(1993)</span></div>
+<div class="ti">Universal Approximation Bounds for Superpositions of a Sigmoidal Function</div>
+<div class="ve">IEEE Transactions on Information Theory, 39, 930–945</div>
+<div class="links"><a href="https://doi.org/10.1109/18.256500">doi:10.1109/18.256500</a><span class="where">解説文 2.3, 3.9 · スライド</span><code class="key">Barron_1993_UniversalApproximationBounds</code></div>
+<p>フーリエ変換の 1 次モーメント \(C_f\) が有限な関数なら，n ユニットのシグモイドネットワークの 2 乗誤差が次元によらず O(1/n) で減ることを示した．解説文では近似のレートと次元の呪いの議論として引いた (Barron 空間)．</p><div class="eq">\[\int_{B_r}\bigl(f(x)-f_n(x)\bigr)^2\mu(dx)\le\frac{(2rC_f)^2}{n},\qquad C_f=\int|\omega|\,|\hat f(\omega)|\,d\omega\]</div>
+</article>
+<article id="Bishop_1995_NeuralNetworksPattern" data-s="bishop, c. m. neural networks for pattern recognition パターン認識のための nn の教科書．出力の入力についての 2 階微分 (曲率) を罰する平滑化や，正則化理論と rbf ネットワークの関係を扱う．解説文では学習器の微分を罰する正則化の流れの参照先として引いた． bishop_1995_neuralnetworkspattern">
+<div class="meta"><span class="no">10</span><span class="au">Bishop, C. M.</span> <span class="yr">(1995)</span></div>
+<div class="ti">Neural Networks for Pattern Recognition</div>
+<div class="ve">Clarendon Press (Oxford University Press)</div>
+<div class="links"><span class="where">解説文 2.3</span><code class="key">Bishop_1995_NeuralNetworksPattern</code></div>
+<p>パターン認識のための NN の教科書．出力の入力についての 2 階微分 (曲率) を罰する平滑化や，正則化理論と RBF ネットワークの関係を扱う．解説文では学習器の微分を罰する正則化の流れの参照先として引いた．</p>
+</article>
+<article id="Kim_etal_2009_L1TrendFiltering" data-s="kim, s. j.; koh, k.; boyd, s.; gorinevsky, d. ℓ\textsubscript1 trend filtering ℓ1 トレンドフィルタ: 2 階差分の l1 罰則で時系列を区分線形に当てはめる．解説文の問題4 の滑らかさの項 \(\int|\kappa&#x27;&#x27;|\,ds\) はこれと同じ形で，l1 が疎な解を好むため曲率が区分線形 (クロソイドと円弧の組合せ) になることの説明に引いた． kim_etal_2009_l1trendfiltering">
+<div class="meta"><span class="no">11</span><span class="au">Kim, S. J.; Koh, K.; Boyd, S.; Gorinevsky, D.</span> <span class="yr">(2009)</span></div>
+<div class="ti">ℓ\textsubscript1 Trend Filtering</div>
+<div class="ve">SIAM Review, 51, 339–360</div>
+<div class="links"><a href="https://doi.org/10.1137/070690274">doi:10.1137/070690274</a><span class="where">解説文 2.3</span><code class="key">Kim_etal_2009_L1TrendFiltering</code></div>
+<p>ℓ1 トレンドフィルタ: 2 階差分の L1 罰則で時系列を区分線形に当てはめる．解説文の問題4 の滑らかさの項 \(\int|\kappa&#x27;&#x27;|\,ds\) はこれと同じ形で，L1 が疎な解を好むため曲率が区分線形 (クロソイドと円弧の組合せ) になることの説明に引いた．</p><div class="eq">\[\min_x\ \frac12\sum_t (y_t-x_t)^2+\lambda\sum_t |x_{t-1}-2x_t+x_{t+1}|\quad\longleftrightarrow\quad \mathcal{L}_s=\int|\kappa&#x27;&#x27;|\,ds\]</div>
+</article>
+<article id="Lagaris_etal_1998_ArtificialNeuralNetworks" data-s="lagaris, i.; likas, a.; fotiadis, d. artificial neural networks for solving ordinary and partial differential equations nn で常・偏微分方程式を解いた先駆的な論文．境界条件を満たす関数 a と境界で 0 になる関数 b を使う試行解で，境界条件を構造で厳密に満たす．導関数は手で導いて実装していた．解説文の帰納バイアス 1 (出力の形で満たす) の基本例． lagaris_etal_1998_artificialneuralnetworks">
+<div class="meta"><span class="no">12</span><span class="au">Lagaris, I.; Likas, A.; Fotiadis, D.</span> <span class="yr">(1998)</span></div>
+<div class="ti">Artificial Neural Networks for Solving Ordinary and Partial Differential Equations</div>
+<div class="ve">IEEE Transactions on Neural Networks, 9, 987–1000</div>
+<div class="links"><a href="https://doi.org/10.1109/72.712178">doi:10.1109/72.712178</a><span class="where">解説文 2.3, 3.5, 6 · スライド</span><code class="key">Lagaris_etal_1998_ArtificialNeuralNetworks</code></div>
+<p>NN で常・偏微分方程式を解いた先駆的な論文．境界条件を満たす関数 A と境界で 0 になる関数 B を使う試行解で，境界条件を構造で厳密に満たす．導関数は手で導いて実装していた．解説文の帰納バイアス 1 (出力の形で満たす) の基本例．</p><div class="eq">\[u_\theta(x)=A(x)+B(x)\,f_\theta(x)\qquad(\text{例: }u_\theta(t)=u_0+t\,f_\theta(t))\]</div>
+</article>
+<article id="Moody_1991_EffectiveNumberParameters" data-s="moody, j. the effective number of parameters: an analysis of generalization and regularization in nonlinear learning systems ニューラルネットの汎化誤差を，正則化を含めた「有効パラメータ数」で見積もった論文 (nips 1991)．重み減衰に限らない一般の正則化項 (学習器の微分を含む) を扱う．解説文では，nn で関数の微分を罰する正則化の早い例として引いた． moody_1991_effectivenumberparameters">
+<div class="meta"><span class="no">13</span><span class="au">Moody, J.</span> <span class="yr">(1991)</span></div>
+<div class="ti">The Effective Number of Parameters: An Analysis of Generalization and Regularization in Nonlinear Learning Systems</div>
+<div class="ve">Advances in Neural Information Processing Systems, 4</div>
+<div class="links"><a href="https://proceedings.neurips.cc/paper/1991/hash/d64a340bcb633f536d56e51874281454-Abstract.html">URL</a><span class="where">解説文 2.3 · スライド</span><code class="key">Moody_1991_EffectiveNumberParameters</code></div>
+<p>ニューラルネットの汎化誤差を，正則化を含めた「有効パラメータ数」で見積もった論文 (NIPS 1991)．重み減衰に限らない一般の正則化項 (学習器の微分を含む) を扱う．解説文では，NN で関数の微分を罰する正則化の早い例として引いた．</p><div class="eq">\[\langle \text{テスト誤差}\rangle\approx\langle \text{学習誤差}\rangle+2\sigma^2\,\frac{p_{\mathrm{eff}}(\lambda)}{n}\]</div>
+</article>
+<article id="Tikhonov_Arsenin_1977_SolutionsIllposedProblems" data-s="tikhonov, a. n.; arsenin, v. y. solutions of ill-posed problems 不適切問題の正則化の古典 (原著 1974)．罰則として足す tikhonov 型と，解の候補を集合に制限する ivanov 型 (準解) を扱う．解説文の 2.3 節は，学習バイアス (罰則) と帰納バイアス (構造) の対比をこの 2 つの書き方の対比に重ねる． tikhonov_arsenin_1977_solutionsillposedproblems">
+<div class="meta"><span class="no">14</span><span class="au">Tikhonov, A. N.; Arsenin, V. Y.</span> <span class="yr">(1977)</span></div>
+<div class="ti">Solutions of Ill-Posed Problems</div>
+<div class="ve">Winston</div>
+<div class="links"><span class="where">解説文 2.3 · スライド</span><code class="key">Tikhonov_Arsenin_1977_SolutionsIllposedProblems</code></div>
+<p>不適切問題の正則化の古典 (原著 1974)．罰則として足す Tikhonov 型と，解の候補を集合に制限する Ivanov 型 (準解) を扱う．解説文の 2.3 節は，学習バイアス (罰則) と帰納バイアス (構造) の対比をこの 2 つの書き方の対比に重ねる．</p><div class="eq">\[\text{Tikhonov: }\min_f\ \|Af-y\|^2+\lambda\|Lf\|^2,\qquad \text{Ivanov: }\min_f\ \|Af-y\|^2\ \ \text{s.t. }\|Lf\|\le\tau\]</div>
+</article>
+<article id="Wahba_1990_SplineModelsObservational" data-s="wahba, g. spline models for observational data 平滑化スプラインと再生核ヒルベルト空間 (rkhs) による正則化理論の標準的な教科書．2 階微分の罰則の解が自然 3 次スプラインになることなどを体系化した．解説文では「関数の微分を罰する」正則化の系譜として引いた． wahba_1990_splinemodelsobservational">
+<div class="meta"><span class="no">15</span><span class="au">Wahba, G.</span> <span class="yr">(1990)</span></div>
+<div class="ti">Spline Models for Observational Data</div>
+<div class="ve">Society for Industrial and Applied Mathematics (SIAM)</div>
+<div class="links"><a href="https://doi.org/10.1137/1.9781611970128">doi:10.1137/1.9781611970128</a><span class="where">解説文 2.3 · スライド</span><code class="key">Wahba_1990_SplineModelsObservational</code></div>
+<p>平滑化スプラインと再生核ヒルベルト空間 (RKHS) による正則化理論の標準的な教科書．2 階微分の罰則の解が自然 3 次スプラインになることなどを体系化した．解説文では「関数の微分を罰する」正則化の系譜として引いた．</p><div class="eq">\[\min_f\ \sum_k\bigl(y_k-f(x_k)\bigr)^2+\lambda\int f&#x27;&#x27;(x)^2\,dx\]</div>
+</article>
+<article id="Raissi_etal_2019_PhysicsinformedNeuralNetworks" data-s="raissi, m.; perdikaris, p.; karniadakis, g. e. physics-informed neural networks: a deep learning framework for solving forward and inverse problems involving nonlinear partial differential equations pinn の原論文 (j. comput. phys.)．解を nn で表し，支配方程式の残差を自動微分で計算して罰則に加える．順問題と係数の同定 (逆問題) を同じ枠組みで扱い，陰的ルンゲ・クッタ法を使う離散時間版も示した．解説文の記号 \(\mathcal{n}[u;\lambda]\) はこの論文に従った． raissi_etal_2019_physicsinformedneuralnetworks">
+<div class="meta"><span class="no">16</span><span class="au">Raissi, M.; Perdikaris, P.; Karniadakis, G. E.</span> <span class="yr">(2019)</span></div>
+<div class="ti">Physics-Informed Neural Networks: A Deep Learning Framework for Solving Forward and Inverse Problems Involving Nonlinear Partial Differential Equations</div>
+<div class="ve">Journal of Computational Physics, 378, 686–707</div>
+<div class="links"><a href="https://doi.org/10.1016/j.jcp.2018.10.045">doi:10.1016/j.jcp.2018.10.045</a><span class="where">解説文 2.4, 3.2, 3.10, 5 · スライド</span><code class="key">Raissi_etal_2019_PhysicsinformedNeuralNetworks</code></div>
+<p>PINN の原論文 (J. Comput. Phys.)．解を NN で表し，支配方程式の残差を自動微分で計算して罰則に加える．順問題と係数の同定 (逆問題) を同じ枠組みで扱い，陰的ルンゲ・クッタ法を使う離散時間版も示した．解説文の記号 \(\mathcal{N}[u;\lambda]\) はこの論文に従った．</p><div class="eq">\[\mathcal{L}=w_r\frac{1}{n_r}\sum_{i=1}^{n_r}\bigl|\mathcal{N}[u_\theta;\lambda](x_i)\bigr|^2+w_b\frac{1}{n_b}\sum_{j}\bigl|\mathcal{B}[u_\theta](x_j)-g(x_j)\bigr|^2+w_d\frac{1}{n_d}\sum_{k}\bigl|u_\theta(x_k)-y_k\bigr|^2\]</div>
+</article>
+<h2 id="g3">3 バイアスを実現する技術</h2>
+<article id="E_Yu_2018_DeepRitzMethod" data-s="e, w.; yu, b. the deep ritz method: a deep learning-based numerical algorithm for solving variational problems deep ritz 法: 強形式の残差の代わりに，変分問題のエネルギー汎関数を nn で最小化する．導関数の階数が下がり，境界条件は罰則で入れる．解説文では pinn の損失の変種として挙げた． e_yu_2018_deepritzmethod">
+<div class="meta"><span class="no">17</span><span class="au">E, W.; Yu, B.</span> <span class="yr">(2018)</span></div>
+<div class="ti">The Deep Ritz Method: A Deep Learning-Based Numerical Algorithm for Solving Variational Problems</div>
+<div class="ve">Communications in Mathematics and Statistics, 6, 1–12</div>
+<div class="links"><a href="https://doi.org/10.1007/s40304-018-0127-z">doi:10.1007/s40304-018-0127-z</a><span class="where">解説文 3.2</span><code class="key">E_Yu_2018_DeepRitzMethod</code></div>
+<p>Deep Ritz 法: 強形式の残差の代わりに，変分問題のエネルギー汎関数を NN で最小化する．導関数の階数が下がり，境界条件は罰則で入れる．解説文では PINN の損失の変種として挙げた．</p><div class="eq">\[\min_\theta\ \int_\Omega\Bigl(\tfrac12|\nabla u_\theta|^2-f\,u_\theta\Bigr)dx+\beta\int_{\partial\Omega}u_\theta^2\,ds\]</div>
+</article>
+<article id="Kharazmi_etal_2019_VariationalPhysicsInformedNeural" data-s="kharazmi, e.; zhang, z.; karniadakis, g. e. variational physics-informed neural networks for solving partial differential equations vpinn: 残差にテスト関数を掛けて積分した弱形式を損失にする (petrov–galerkin 型)．部分積分で導関数を試験関数に移せるので要求する階数が下がり，求積も正確にできる．解説文では損失の変種と，有限要素法を取り込んだ手法の例として引いた． kharazmi_etal_2019_variationalphysicsinformedneural">
+<div class="meta"><span class="no">18</span><span class="au">Kharazmi, E.; Zhang, Z.; Karniadakis, G. E.</span> <span class="yr">(2019)</span></div>
+<div class="ti">Variational Physics-Informed Neural Networks For Solving Partial Differential Equations</div>
+<div class="ve">arXiv</div>
+<div class="links"><a href="https://doi.org/10.48550/arXiv.1912.00873">doi:10.48550/arXiv.1912.00873</a><span class="where">解説文 3.2, 5 · スライド</span><code class="key">Kharazmi_etal_2019_VariationalPhysicsInformedNeural</code></div>
+<p>VPINN: 残差にテスト関数を掛けて積分した弱形式を損失にする (Petrov–Galerkin 型)．部分積分で導関数を試験関数に移せるので要求する階数が下がり，求積も正確にできる．解説文では損失の変種と，有限要素法を取り込んだ手法の例として引いた．</p><div class="eq">\[\mathcal{L}_r=\sum_{k=1}^{K}\Bigl|\int_\Omega \mathcal{N}[u_\theta]\,v_k\,dx\Bigr|^2\]</div>
+</article>
+<article id="Lu_etal_2021_DeepXDEDeepLearning" data-s="lu, l.; meng, x.; mao, z.; karniadakis, g. e. deepxde: a deep learning library for solving differential equations pinn の実装ライブラリ deepxde の論文 (siam review)．pinn の近似理論の整理と，残差に基づく適応的な点の追加 (rar) も示す．解説文では実装上の基盤の例として引いた． lu_etal_2021_deepxdedeeplearning">
+<div class="meta"><span class="no">19</span><span class="au">Lu, L.; Meng, X.; Mao, Z.; Karniadakis, G. E.</span> <span class="yr">(2021)</span></div>
+<div class="ti">DeepXDE: A Deep Learning Library for Solving Differential Equations</div>
+<div class="ve">SIAM Review, 63, 208–228</div>
+<div class="links"><a href="https://doi.org/10.1137/19M1274067">doi:10.1137/19M1274067</a><span class="where">解説文 3.2</span><code class="key">Lu_etal_2021_DeepXDEDeepLearning</code></div>
+<p>PINN の実装ライブラリ DeepXDE の論文 (SIAM Review)．PINN の近似理論の整理と，残差に基づく適応的な点の追加 (RAR) も示す．解説文では実装上の基盤の例として引いた．</p>
+</article>
+<article id="Sirignano_Spiliopoulos_2018_DGMDeepLearning" data-s="sirignano, j.; spiliopoulos, k. dgm: a deep learning algorithm for solving partial differential equations dgm: 毎反復でランダムに選んだ点での残差の 2 乗を確率的勾配法で減らす．高次元の pde をメッシュなしで扱う．解説文では pinn の損失の変種 (点の選び方) として挙げた． sirignano_spiliopoulos_2018_dgmdeeplearning">
+<div class="meta"><span class="no">20</span><span class="au">Sirignano, J.; Spiliopoulos, K.</span> <span class="yr">(2018)</span></div>
+<div class="ti">DGM: A Deep Learning Algorithm for Solving Partial Differential Equations</div>
+<div class="ve">Journal of Computational Physics, 375, 1339–1364</div>
+<div class="links"><a href="https://doi.org/10.1016/j.jcp.2018.08.029">doi:10.1016/j.jcp.2018.08.029</a><span class="where">解説文 3.2</span><code class="key">Sirignano_Spiliopoulos_2018_DGMDeepLearning</code></div>
+<p>DGM: 毎反復でランダムに選んだ点での残差の 2 乗を確率的勾配法で減らす．高次元の PDE をメッシュなしで扱う．解説文では PINN の損失の変種 (点の選び方) として挙げた．</p>
+</article>
+<article id="Baydin_etal_2018_AutomaticDifferentiationMachine" data-s="baydin, a. g.; pearlmutter, b. a.; radul, a. a.; siskind, j. m. automatic differentiation in machine learning: a survey 機械学習のための自動微分のサーベイ (jmlr)．前進モード・後退モード，数値微分・数式微分との違いを整理する．解説文の 3.3 節で，pinn が学習器の入力についての導関数を正確に計算できる根拠として引いた． baydin_etal_2018_automaticdifferentiationmachine">
+<div class="meta"><span class="no">21</span><span class="au">Baydin, A. G.; Pearlmutter, B. A.; Radul, A. A.; Siskind, J. M.</span> <span class="yr">(2018)</span></div>
+<div class="ti">Automatic Differentiation in Machine Learning: A Survey</div>
+<div class="ve">Journal of Machine Learning Research, 18, 1–43</div>
+<div class="links"><a href="https://jmlr.org/papers/v18/17-468.html">URL</a><span class="where">解説文 3.3</span><code class="key">Baydin_etal_2018_AutomaticDifferentiationMachine</code></div>
+<p>機械学習のための自動微分のサーベイ (JMLR)．前進モード・後退モード，数値微分・数式微分との違いを整理する．解説文の 3.3 節で，PINN が学習器の入力についての導関数を正確に計算できる根拠として引いた．</p><div class="eq">\[u_\theta=f_L\circ\cdots\circ f_1\ \Rightarrow\ \frac{\partial u_\theta}{\partial x}=\frac{\partial f_L}{\partial f_{L-1}}\cdots\frac{\partial f_1}{\partial x}\quad(\text{連鎖律を機械的に})\]</div>
+</article>
+<article id="Sitzmann_etal_2020_ImplicitNeuralRepresentations" data-s="sitzmann, v.; martel, j.; bergman, a.; lindell, d.; wetzstein, g. implicit neural representations with periodic activation functions siren: 活性化に正弦関数を使う座標 mlp．任意階の導関数がまた正弦の形になるので，導関数を含む損失と相性がよい．解説文では活性化関数の滑らかさと，スペクトルバイアスへの対策 (周期活性化) として引いた． sitzmann_etal_2020_implicitneuralrepresentations">
+<div class="meta"><span class="no">22</span><span class="au">Sitzmann, V.; Martel, J.; Bergman, A.; Lindell, D.; Wetzstein, G.</span> <span class="yr">(2020)</span></div>
+<div class="ti">Implicit Neural Representations with Periodic Activation Functions</div>
+<div class="ve">Advances in Neural Information Processing Systems, 33, 7462–7473</div>
+<div class="links"><a href="https://proceedings.neurips.cc/paper_files/paper/2020/hash/53c04118df112c13a8c34b38343b9c10-Abstract.html">URL</a><span class="where">解説文 3.3, 3.4, 6 · スライド</span><code class="key">Sitzmann_etal_2020_ImplicitNeuralRepresentations</code></div>
+<p>SIREN: 活性化に正弦関数を使う座標 MLP．任意階の導関数がまた正弦の形になるので，導関数を含む損失と相性がよい．解説文では活性化関数の滑らかさと，スペクトルバイアスへの対策 (周期活性化) として引いた．</p><div class="eq">\[\phi_l(x)=\sin(\omega_0\,W_l x+b_l)\]</div>
+</article>
+<article id="Mildenhall_etal_2021_NeRFRepresentingScenes" data-s="mildenhall, b.; srinivasan, p. p.; tancik, m.; barron, j. t.; ramamoorthi, r.; ng, r. nerf: representing scenes as neural radiance fields for view synthesis nerf: 3 次元シーンの密度と色を座標の mlp で表し，光線に沿った積分を有限和 (求積) で近似して撮影画像との差を最小化する．解説文では「座標を入力とする nn ＋有限和の求積」という構造を pinn と共有する例として引いた． mildenhall_etal_2021_nerfrepresentingscenes">
+<div class="meta"><span class="no">23</span><span class="au">Mildenhall, B.; Srinivasan, P. P.; Tancik, M.; Barron, J. T.; Ramamoorthi, R.; Ng, R.</span> <span class="yr">(2021)</span></div>
+<div class="ti">NeRF: Representing Scenes as Neural Radiance Fields for View Synthesis</div>
+<div class="ve">Commun. ACM, 65, 99–106</div>
+<div class="links"><a href="https://doi.org/10.1145/3503250">doi:10.1145/3503250</a><span class="where">解説文 3.4 · スライド</span><code class="key">Mildenhall_etal_2021_NeRFRepresentingScenes</code></div>
+<p>NeRF: 3 次元シーンの密度と色を座標の MLP で表し，光線に沿った積分を有限和 (求積) で近似して撮影画像との差を最小化する．解説文では「座標を入力とする NN ＋有限和の求積」という構造を PINN と共有する例として引いた．</p><div class="eq">\[\hat C(\mathbf r)=\sum_{i=1}^{N}T_i\bigl(1-e^{-\sigma_i\delta_i}\bigr)\mathbf c_i,\qquad T_i=\exp\Bigl(-\sum_{j&lt;i}\sigma_j\delta_j\Bigr)\]</div>
+</article>
+<article id="Muller_etal_2022_InstantNeuralGraphics" data-s="müller, t.; evans, a.; schied, c.; keller, a. instant neural graphics primitives with a multiresolution hash encoding instant-ngp: 多解像度のハッシュ格子に置いた学習可能な特徴量を入力の符号化に使い，小さな mlp で高速に学習する．解説文では nerf と piml の間を流れた入力の符号化の例として引いた． muller_etal_2022_instantneuralgraphics">
+<div class="meta"><span class="no">24</span><span class="au">Müller, T.; Evans, A.; Schied, C.; Keller, A.</span> <span class="yr">(2022)</span></div>
+<div class="ti">Instant Neural Graphics Primitives with a Multiresolution Hash Encoding</div>
+<div class="ve">ACM Transactions on Graphics, 41, 102:1–102:15</div>
+<div class="links"><a href="https://doi.org/10.1145/3528223.3530127">doi:10.1145/3528223.3530127</a><span class="where">解説文 3.4 · スライド</span><code class="key">Muller_etal_2022_InstantNeuralGraphics</code></div>
+<p>Instant-NGP: 多解像度のハッシュ格子に置いた学習可能な特徴量を入力の符号化に使い，小さな MLP で高速に学習する．解説文では NeRF と PIML の間を流れた入力の符号化の例として引いた．</p>
+</article>
+<article id="Tancik_etal_2020_FourierFeaturesLet" data-s="tancik, m.; srinivasan, p.; mildenhall, b.; fridovich-keil, s.; raghavan, n.; singhal, u.; ramamoorthi, r.; barron, j.; ng, r. fourier features let networks learn high frequency functions in low dimensional domains 入力をランダムなフーリエ特徴量に写してから mlp に入れると，低周波に偏るスペクトルバイアスが和らぎ高周波を学べることを ntk で示した．解説文では入力の符号化の代表として引いた． tancik_etal_2020_fourierfeatureslet">
+<div class="meta"><span class="no">25</span><span class="au">Tancik, M.; Srinivasan, P.; Mildenhall, B.; Fridovich-Keil, S.; Raghavan, N.; Singhal, U.; Ramamoorthi, R.; Barron, J.; Ng, R.</span> <span class="yr">(2020)</span></div>
+<div class="ti">Fourier Features Let Networks Learn High Frequency Functions in Low Dimensional Domains</div>
+<div class="ve">Advances in Neural Information Processing Systems, 33, 7537–7547</div>
+<div class="links"><a href="https://proceedings.neurips.cc/paper_files/paper/2020/hash/55053683268957697aa39fba6f231c68-Abstract.html">URL</a><span class="where">解説文 3.4, 6 · スライド</span><code class="key">Tancik_etal_2020_FourierFeaturesLet</code></div>
+<p>入力をランダムなフーリエ特徴量に写してから MLP に入れると，低周波に偏るスペクトルバイアスが和らぎ高周波を学べることを NTK で示した．解説文では入力の符号化の代表として引いた．</p><div class="eq">\[\gamma(x)=\bigl[\cos(2\pi Bx),\ \sin(2\pi Bx)\bigr]^\top,\qquad B_{ij}\sim\mathcal{N}(0,\sigma^2)\]</div>
+</article>
+<article id="Sukumar_Srivastava_2022_ExactImpositionBoundary" data-s="sukumar, n.; srivastava, a. exact imposition of boundary conditions with distance functions in physics-informed deep neural networks 複雑な領域でも境界条件を厳密に課すため，境界で 0・内部で正になる距離関数 (r 関数などで近似) を試行解の b に使う方法．解説文では lagaris らの試行解を一般の形状に広げる例として引いた． sukumar_srivastava_2022_exactimpositionboundary">
+<div class="meta"><span class="no">26</span><span class="au">Sukumar, N.; Srivastava, A.</span> <span class="yr">(2022)</span></div>
+<div class="ti">Exact Imposition of Boundary Conditions with Distance Functions in Physics-Informed Deep Neural Networks</div>
+<div class="ve">Computer Methods in Applied Mechanics and Engineering, 389, 114333</div>
+<div class="links"><a href="https://doi.org/10.1016/j.cma.2021.114333">doi:10.1016/j.cma.2021.114333</a><span class="where">解説文 3.5, 6 · スライド</span><code class="key">Sukumar_Srivastava_2022_ExactImpositionBoundary</code></div>
+<p>複雑な領域でも境界条件を厳密に課すため，境界で 0・内部で正になる距離関数 (R 関数などで近似) を試行解の B に使う方法．解説文では Lagaris らの試行解を一般の形状に広げる例として引いた．</p><div class="eq">\[u_\theta(x)=g(x)+\phi(x)\,f_\theta(x),\qquad \phi=0\ \text{on }\partial\Omega,\ \ \phi&gt;0\ \text{in }\Omega\]</div>
+</article>
+<article id="Chen_etal_2018_NeuralOrdinaryDifferential" data-s="chen, r. t. q.; rubanova, y.; bettencourt, j.; duvenaud, d. k. neural ordinary differential equations neural ode: 微分方程式の右辺を nn で表し，ode ソルバーを層として積分する．勾配は随伴方程式で計算する．解説文では積分層 (j を積分して運動学を満たす曲線を作る) と同じ考え方の例として引いた． chen_etal_2018_neuralordinarydifferential">
+<div class="meta"><span class="no">27</span><span class="au">Chen, R. T. Q.; Rubanova, Y.; Bettencourt, J.; Duvenaud, D. K.</span> <span class="yr">(2018)</span></div>
+<div class="ti">Neural Ordinary Differential Equations</div>
+<div class="ve">Advances in Neural Information Processing Systems, 31</div>
+<div class="links"><a href="https://proceedings.neurips.cc/paper_files/paper/2018/hash/69386f6bb1dfed68692a24c8686939b9-Abstract.html">URL</a><span class="where">解説文 3.6, 3.7</span><code class="key">Chen_etal_2018_NeuralOrdinaryDifferential</code></div>
+<p>Neural ODE: 微分方程式の右辺を NN で表し，ODE ソルバーを層として積分する．勾配は随伴方程式で計算する．解説文では積分層 (j を積分して運動学を満たす曲線を作る) と同じ考え方の例として引いた．</p><div class="eq">\[\frac{dh}{dt}=f_\theta(h,t),\qquad h(T)=h(0)+\int_0^T f_\theta(h,t)\,dt\]</div>
+</article>
+<article id="Negiar_etal_2023_LearningDifferentiableSolvers" data-s="négiar, g.; mahoney, m. w.; krishnapriyan, a. s. learning differentiable solvers for systems with hard constraints pde の制約を，微分可能な求解 (射影) 層で厳密に満たしながら nn を学習する方法 (iclr 2023)．陰関数定理で層を通した勾配を計算する．解説文では射影層 (終点の条件を満たす補正) の背景として引いた． negiar_etal_2023_learningdifferentiablesolvers">
+<div class="meta"><span class="no">28</span><span class="au">Négiar, G.; Mahoney, M. W.; Krishnapriyan, A. S.</span> <span class="yr">(2023)</span></div>
+<div class="ti">Learning Differentiable Solvers for Systems with Hard Constraints</div>
+<div class="ve">The Eleventh International Conference on Learning Representations</div>
+<div class="links"><a href="https://openreview.net/forum?id=vdv6CmGksr0">URL</a><span class="where">解説文 3.6 · スライド</span><code class="key">Negiar_etal_2023_LearningDifferentiableSolvers</code></div>
+<p>PDE の制約を，微分可能な求解 (射影) 層で厳密に満たしながら NN を学習する方法 (ICLR 2023)．陰関数定理で層を通した勾配を計算する．解説文では射影層 (終点の条件を満たす補正) の背景として引いた．</p><div class="eq">\[F\bigl(c^*(j);j\bigr)=0\ \Rightarrow\ \frac{\partial c^*}{\partial j}=-\Bigl(\frac{\partial F}{\partial c}\Bigr)^{-1}\frac{\partial F}{\partial j}\]</div>
+</article>
+<article id="Cranmer_etal_2020_LagrangianNeuralNetworks" data-s="cranmer, m.; greydanus, s.; hoyer, s.; battaglia, p.; spergel, d.; ho, s. lagrangian neural networks lnn: ラグランジアンを学び，オイラー・ラグランジュ方程式から加速度を作る．正準座標が使えない系にも使える．解説文では hnn と同じ「出力を固定の演算に通す」型の帰納バイアスとして引いた． cranmer_etal_2020_lagrangianneuralnetworks">
+<div class="meta"><span class="no">29</span><span class="au">Cranmer, M.; Greydanus, S.; Hoyer, S.; Battaglia, P.; Spergel, D.; Ho, S.</span> <span class="yr">(2020)</span></div>
+<div class="ti">Lagrangian Neural Networks</div>
+<div class="ve">ICLR 2020 Workshop on Integration of Deep Neural Models and Differential Equations</div>
+<div class="links"><a href="https://openreview.net/forum?id=iE8tFa4Nq">URL</a><span class="where">解説文 3.7</span><code class="key">Cranmer_etal_2020_LagrangianNeuralNetworks</code></div>
+<p>LNN: ラグランジアンを学び，オイラー・ラグランジュ方程式から加速度を作る．正準座標が使えない系にも使える．解説文では HNN と同じ「出力を固定の演算に通す」型の帰納バイアスとして引いた．</p><div class="eq">\[\ddot q=\bigl(\nabla_{\dot q}\nabla_{\dot q}^\top L_\theta\bigr)^{-1}\bigl[\nabla_q L_\theta-(\nabla_{\dot q}\nabla_q^\top L_\theta)\,\dot q\bigr]\]</div>
+</article>
+<article id="Greydanus_etal_2019_HamiltonianNeuralNetworks" data-s="greydanus, s.; dzamba, m.; yosinski, j. hamiltonian neural networks hnn: 学習器がスカラーのハミルトニアンを表し，その勾配から運動を作る．流れが等高線に沿うので学習した \(h_\theta\) が厳密に保存される．解説文の帰納バイアス 3 (保存則を構造で守る) の代表例． greydanus_etal_2019_hamiltonianneuralnetworks">
+<div class="meta"><span class="no">30</span><span class="au">Greydanus, S.; Dzamba, M.; Yosinski, J.</span> <span class="yr">(2019)</span></div>
+<div class="ti">Hamiltonian Neural Networks</div>
+<div class="ve">Advances in Neural Information Processing Systems, 32</div>
+<div class="links"><a href="https://proceedings.neurips.cc/paper_files/paper/2019/hash/26cd8ecadce0d4efd6cc8a8725cbd1f8-Abstract.html">URL</a><span class="where">解説文 3.7 · スライド</span><code class="key">Greydanus_etal_2019_HamiltonianNeuralNetworks</code></div>
+<p>HNN: 学習器がスカラーのハミルトニアンを表し，その勾配から運動を作る．流れが等高線に沿うので学習した \(H_\theta\) が厳密に保存される．解説文の帰納バイアス 3 (保存則を構造で守る) の代表例．</p><div class="eq">\[H_\theta(q,p)=f_\theta(q,p),\qquad \dot q=\frac{\partial H_\theta}{\partial p},\quad \dot p=-\frac{\partial H_\theta}{\partial q}\ \Rightarrow\ \frac{dH_\theta}{dt}=0\]</div>
+</article>
+<article id="Chen_Chen_1995_UniversalApproximationNonlinear" data-s="chen, t.; chen, h. universal approximation to nonlinear operators by neural networks with arbitrary activation functions and its application to dynamical systems 非線形連続作用素が，入力関数の有限個のセンサー値から係数を作り，出力側の基底に掛けて和をとる形で任意の精度で近似できることを示した (作用素の万能近似)．deeponet の理論的な根拠． chen_chen_1995_universalapproximationnonlinear">
+<div class="meta"><span class="no">31</span><span class="au">Chen, T.; Chen, H.</span> <span class="yr">(1995)</span></div>
+<div class="ti">Universal Approximation to Nonlinear Operators by Neural Networks with Arbitrary Activation Functions and Its Application to Dynamical Systems</div>
+<div class="ve">IEEE Transactions on Neural Networks, 6, 911–917</div>
+<div class="links"><a href="https://doi.org/10.1109/72.392253">doi:10.1109/72.392253</a><span class="where">解説文 3.9 · スライド</span><code class="key">Chen_Chen_1995_UniversalApproximationNonlinear</code></div>
+<p>非線形連続作用素が，入力関数の有限個のセンサー値から係数を作り，出力側の基底に掛けて和をとる形で任意の精度で近似できることを示した (作用素の万能近似)．DeepONet の理論的な根拠．</p><div class="eq">\[\mathcal{G}[a](y)\approx\sum_{k=1}^{p}b_k\bigl(a(x_1),\dots,a(x_m)\bigr)\,t_k(y)\]</div>
+</article>
+<article id="Cybenko_1989_ApproximationSuperpositionsSigmoidal" data-s="cybenko, g. approximation by superpositions of a sigmoidal function シグモイド関数を使う 1 隠れ層のネットワークが，コンパクト集合上の連続関数を一様に任意の精度で近似できることを示した (万能近似定理)．解説文では pinn が解を nn で表してよい根拠として引いた． cybenko_1989_approximationsuperpositionssigmoidal">
+<div class="meta"><span class="no">32</span><span class="au">Cybenko, G.</span> <span class="yr">(1989)</span></div>
+<div class="ti">Approximation by Superpositions of a Sigmoidal Function</div>
+<div class="ve">Mathematics of Control, Signals and Systems, 2, 303–314</div>
+<div class="links"><a href="https://doi.org/10.1007/BF02551274">doi:10.1007/BF02551274</a><span class="where">解説文 3.9 · スライド</span><code class="key">Cybenko_1989_ApproximationSuperpositionsSigmoidal</code></div>
+<p>シグモイド関数を使う 1 隠れ層のネットワークが，コンパクト集合上の連続関数を一様に任意の精度で近似できることを示した (万能近似定理)．解説文では PINN が解を NN で表してよい根拠として引いた．</p><div class="eq">\[\sup_{x\in K}\Bigl|u(x)-\sum_{k=1}^{n}c_k\,\sigma(w_k\cdot x+b_k)\Bigr|&lt;\varepsilon\]</div>
+</article>
+<article id="Hornik_etal_1989_MultilayerFeedforwardNetworks" data-s="hornik, k.; stinchcombe, m.; white, h. multilayer feedforward networks are universal approximators cybenko と同時期に，より一般の (有界・非定数の) 活性化関数について多層ネットワークの万能近似性を示した．解説文では関数の万能近似の根拠として cybenko と並べて引いた． hornik_etal_1989_multilayerfeedforwardnetworks">
+<div class="meta"><span class="no">33</span><span class="au">Hornik, K.; Stinchcombe, M.; White, H.</span> <span class="yr">(1989)</span></div>
+<div class="ti">Multilayer Feedforward Networks Are Universal Approximators</div>
+<div class="ve">Neural Networks, 2, 359–366</div>
+<div class="links"><a href="https://doi.org/10.1016/0893-6080(89)90020-8">doi:10.1016/0893-6080(89)90020-8</a><span class="where">解説文 3.9 · スライド</span><code class="key">Hornik_etal_1989_MultilayerFeedforwardNetworks</code></div>
+<p>Cybenko と同時期に，より一般の (有界・非定数の) 活性化関数について多層ネットワークの万能近似性を示した．解説文では関数の万能近似の根拠として Cybenko と並べて引いた．</p>
+</article>
+<article id="Kovachki_etal_2021_UniversalApproximationError" data-s="kovachki, n.; lanthaler, s.; mishra, s. on universal approximation and error bounds for fourier neural operators fno の万能近似性と，解くべき pde に応じた誤差評価を与えた (jmlr)．解説文では fno が作用素を近似できる根拠として引いた． kovachki_etal_2021_universalapproximationerror">
+<div class="meta"><span class="no">34</span><span class="au">Kovachki, N.; Lanthaler, S.; Mishra, S.</span> <span class="yr">(2021)</span></div>
+<div class="ti">On Universal Approximation and Error Bounds for Fourier Neural Operators</div>
+<div class="ve">Journal of Machine Learning Research, 22, 1–76</div>
+<div class="links"><a href="https://jmlr.org/papers/v22/21-0806.html">URL</a><span class="where">解説文 3.9 · スライド</span><code class="key">Kovachki_etal_2021_UniversalApproximationError</code></div>
+<p>FNO の万能近似性と，解くべき PDE に応じた誤差評価を与えた (JMLR)．解説文では FNO が作用素を近似できる根拠として引いた．</p>
+</article>
+<article id="Li_etal_2021_FourierNeuralOperator" data-s="li, z.; kovachki, n. b.; azizzadenesheli, k.; liu, b.; bhattacharya, k.; stuart, a. m.; anandkumar, a. fourier neural operator for parametric partial differential equations fno: 積分作用素の核をフーリエ空間での掛け算で表し，低次のモードだけを学習する層を積み重ねる (iclr 2021)．重みが格子点ではなくモードに付くので，粗い格子で学習して細かい格子で推論できる (解像度不変)．解説文の問題6 で使った． li_etal_2021_fourierneuraloperator">
+<div class="meta"><span class="no">35</span><span class="au">Li, Z.; Kovachki, N. B.; Azizzadenesheli, K.; Liu, B.; Bhattacharya, K.; Stuart, A. M.; Anandkumar, A.</span> <span class="yr">(2021)</span></div>
+<div class="ti">Fourier Neural Operator for Parametric Partial Differential Equations</div>
+<div class="ve">9th International Conference on Learning Representations, ICLR 2021, Virtual Event, Austria, May 3-7, 2021</div>
+<div class="links"><a href="https://openreview.net/forum?id=c8P9NQVtmnO">URL</a><span class="where">解説文 3.9, 4.7 · スライド</span><code class="key">Li_etal_2021_FourierNeuralOperator</code></div>
+<p>FNO: 積分作用素の核をフーリエ空間での掛け算で表し，低次のモードだけを学習する層を積み重ねる (ICLR 2021)．重みが格子点ではなくモードに付くので，粗い格子で学習して細かい格子で推論できる (解像度不変)．解説文の問題6 で使った．</p><div class="eq">\[v_{l+1}(x)=\sigma\Bigl(W_l\,v_l(x)+\mathcal{F}^{-1}\bigl(R_l\cdot\mathcal{F}v_l\bigr)(x)\Bigr),\qquad R_l\ \text{は低次 }k_{\max}\text{ モードだけ}\]</div>
+</article>
+<article id="Liu_etal_2025_KANKolmogorovArnold" data-s="liu, z.; wang, y.; vaidya, s.; ruehle, f.; halverson, j.; soljacic, m.; hou, t.; tegmark, m. kan: kolmogorov–arnold networks kan: ノードではなく辺に学習可能な 1 変数関数 (b-スプライン) を置く，コルモゴロフ・アーノルドの表現定理に着想を得た構造 (iclr 2025)．解説文では，物理への応用で mlp に対する優位が確立していない新しい構造の例として触れた． liu_etal_2025_kankolmogorovarnold">
+<div class="meta"><span class="no">36</span><span class="au">Liu, Z.; Wang, Y.; Vaidya, S.; Ruehle, F.; Halverson, J.; Soljacic, M.; Hou, T.; Tegmark, M.</span> <span class="yr">(2025)</span></div>
+<div class="ti">KAN: Kolmogorov–Arnold Networks</div>
+<div class="ve">International Conference on Learning Representations, 2025, 70367–70413</div>
+<div class="links"><a href="https://proceedings.iclr.cc/paper_files/paper/2025/hash/afaed89642ea100935e39d39a4da602c-Abstract-Conference.html">URL</a><span class="where">解説文 3.9 · スライド</span><code class="key">Liu_etal_2025_KANKolmogorovArnold</code></div>
+<p>KAN: ノードではなく辺に学習可能な 1 変数関数 (B-スプライン) を置く，コルモゴロフ・アーノルドの表現定理に着想を得た構造 (ICLR 2025)．解説文では，物理への応用で MLP に対する優位が確立していない新しい構造の例として触れた．</p><div class="eq">\[f(x)=\sum_{q=1}^{2n+1}\Phi_q\Bigl(\sum_{p=1}^{n}\phi_{q,p}(x_p)\Bigr)\]</div>
+</article>
+<article id="Lu_etal_2021_LearningNonlinearOperators" data-s="lu, l.; jin, p.; pang, g.; zhang, z.; karniadakis, g. e. learning nonlinear operators via deeponet based on the universal approximation theorem of operators deeponet: chen &amp; chen の形の係数部分 (branch net) と基底部分 (trunk net) を深層 nn にした作用素学習の構造 (nature machine intelligence)．解説文では作用素学習の代表的な構造として引いた． lu_etal_2021_learningnonlinearoperators">
+<div class="meta"><span class="no">37</span><span class="au">Lu, L.; Jin, P.; Pang, G.; Zhang, Z.; Karniadakis, G. E.</span> <span class="yr">(2021)</span></div>
+<div class="ti">Learning Nonlinear Operators via DeepONet Based on the Universal Approximation Theorem of Operators</div>
+<div class="ve">Nature Machine Intelligence, 3, 218–229</div>
+<div class="links"><a href="https://doi.org/10.1038/s42256-021-00302-5">doi:10.1038/s42256-021-00302-5</a><span class="where">解説文 3.9 · スライド</span><code class="key">Lu_etal_2021_LearningNonlinearOperators</code></div>
+<p>DeepONet: Chen &amp; Chen の形の係数部分 (branch net) と基底部分 (trunk net) を深層 NN にした作用素学習の構造 (Nature Machine Intelligence)．解説文では作用素学習の代表的な構造として引いた．</p><div class="eq">\[\mathcal{G}_\theta[a](y)=\sum_{k=1}^{p}\underbrace{b_k\bigl(a(x_1),\dots,a(x_m)\bigr)}_{\text{branch}}\ \underbrace{t_k(y)}_{\text{trunk}}\]</div>
+</article>
+<article id="Li_etal_2024_PhysicsInformedNeuralOperator" data-s="li, z.; zheng, h.; kovachki, n.; jin, d.; chen, h.; liu, b.; azizzadenesheli, k.; anandkumar, a. physics-informed neural operator for learning partial differential equations pino: 作用素学習 (fno) に物理の損失を加え，条件 a の分布で平均した損失で学ぶ．解のデータによる教師あり項と，個々の条件で物理の損失だけで微調整する段階も設ける．解説文の 3.10 節は pinn と pino を一つの損失で書く． li_etal_2024_physicsinformedneuraloperator">
+<div class="meta"><span class="no">38</span><span class="au">Li, Z.; Zheng, H.; Kovachki, N.; Jin, D.; Chen, H.; Liu, B.; Azizzadenesheli, K.; Anandkumar, A.</span> <span class="yr">(2024)</span></div>
+<div class="ti">Physics-Informed Neural Operator for Learning Partial Differential Equations</div>
+<div class="ve">ACM/JMS Journal of Data Science, 1, 9:1–9:27</div>
+<div class="links"><a href="https://doi.org/10.1145/3648506">doi:10.1145/3648506</a><span class="where">解説文 3.10</span><code class="key">Li_etal_2024_PhysicsInformedNeuralOperator</code></div>
+<p>PINO: 作用素学習 (FNO) に物理の損失を加え，条件 a の分布で平均した損失で学ぶ．解のデータによる教師あり項と，個々の条件で物理の損失だけで微調整する段階も設ける．解説文の 3.10 節は PINN と PINO を一つの損失で書く．</p><div class="eq">\[\mathcal{L}(\theta,\lambda)=\mathbb{E}_a\Bigl[w_r\frac{1}{n_r}\sum_i\bigl|\mathcal{N}[u_\theta;\lambda,a](x_i)\bigr|^2+w_b\mathcal{L}_b+w_d\mathcal{L}_d\Bigr],\qquad u_\theta=\mathcal{G}_\theta[a]\]</div>
+</article>
+<article id="Wang_etal_2021_LearningSolutionOperator" data-s="wang, s.; wang, h.; perdikaris, p. learning the solution operator of parametric partial differential equations with physics-informed deeponets physics-informed deeponet: deeponet を解のデータなしで，物理の損失だけで (または少量のデータと併せて) 学習する (science advances)．解説文では pino と同じ枠組みに入る例として引いた (2021a)． wang_etal_2021_learningsolutionoperator">
+<div class="meta"><span class="no">39</span><span class="au">Wang, S.; Wang, H.; Perdikaris, P.</span> <span class="yr">(2021)</span></div>
+<div class="ti">Learning the Solution Operator of Parametric Partial Differential Equations with Physics-Informed DeepONets</div>
+<div class="ve">Science Advances, 7, eabi8605</div>
+<div class="links"><a href="https://doi.org/10.1126/sciadv.abi8605">doi:10.1126/sciadv.abi8605</a><span class="where">解説文 3.10</span><code class="key">Wang_etal_2021_LearningSolutionOperator</code></div>
+<p>physics-informed DeepONet: DeepONet を解のデータなしで，物理の損失だけで (または少量のデータと併せて) 学習する (Science Advances)．解説文では PINO と同じ枠組みに入る例として引いた (2021a)．</p>
+</article>
+<h2 id="g4">4 事例研究: 制約付き曲線の設計</h2>
+<article id="Kingma_Ba_2015_AdamMethodStochastic" data-s="kingma, d. p.; ba, j. adam: a method for stochastic optimization adam: 勾配の 1 次・2 次モーメントの移動平均で各成分の歩幅を正規化する確率的勾配法．解説文の事例はすべて adam で学習し，問題7b では勾配の大きさが正規化されるため罰則の重みより反復数と学習率が効いた． kingma_ba_2015_adammethodstochastic">
+<div class="meta"><span class="no">40</span><span class="au">Kingma, D. P.; Ba, J.</span> <span class="yr">(2015)</span></div>
+<div class="ti">Adam: A Method for Stochastic Optimization</div>
+<div class="ve">3rd International Conference on Learning Representations, ICLR 2015, San Diego, CA, USA, May 7-9, 2015, Conference Track Proceedings</div>
+<div class="links"><a href="https://doi.org/10.48550/ARXIV.1412.6980">doi:10.48550/ARXIV.1412.6980</a><span class="where">解説文 4, 7.1</span><code class="key">Kingma_Ba_2015_AdamMethodStochastic</code></div>
+<p>Adam: 勾配の 1 次・2 次モーメントの移動平均で各成分の歩幅を正規化する確率的勾配法．解説文の事例はすべて Adam で学習し，問題7b では勾配の大きさが正規化されるため罰則の重みより反復数と学習率が効いた．</p><div class="eq">\[\theta_{t+1}=\theta_t-\eta\,\frac{\hat m_t}{\sqrt{\hat v_t}+\epsilon},\qquad m_t=\beta_1 m_{t-1}+(1-\beta_1)g_t,\ \ v_t=\beta_2 v_{t-1}+(1-\beta_2)g_t^2\]</div>
+</article>
+<article id="Liu_Nocedal_1989_LimitedMemoryBFGS" data-s="liu, d. c.; nocedal, j. on the limited memory bfgs method for large scale optimization l-bfgs: 直近 m 回の勾配の差だけで逆ヘッセ行列を近似する準ニュートン法．解説文の問題1〜3 では adam の後に l-bfgs を使い，問題2 の考察で悪条件の谷を一気に収束させた． liu_nocedal_1989_limitedmemorybfgs">
+<div class="meta"><span class="no">41</span><span class="au">Liu, D. C.; Nocedal, J.</span> <span class="yr">(1989)</span></div>
+<div class="ti">On the Limited Memory BFGS Method for Large Scale Optimization</div>
+<div class="ve">Mathematical Programming, 45, 503–528</div>
+<div class="links"><a href="https://doi.org/10.1007/BF01589116">doi:10.1007/BF01589116</a><span class="where">解説文 4, 7.1</span><code class="key">Liu_Nocedal_1989_LimitedMemoryBFGS</code></div>
+<p>L-BFGS: 直近 m 回の勾配の差だけで逆ヘッセ行列を近似する準ニュートン法．解説文の問題1〜3 では Adam の後に L-BFGS を使い，問題2 の考察で悪条件の谷を一気に収束させた．</p><div class="eq">\[\theta_{k+1}=\theta_k-\alpha_k H_k\nabla\mathcal{L}(\theta_k),\qquad H_k\ \text{は }(s_i,y_i)_{i=k-m}^{k-1}\text{ から作る}\]</div>
+</article>
+<article id="Bertolazzi_Frego_2015_G1FittingClothoids" data-s="bertolazzi, e.; frego, m. g1 fitting with clothoids 2 点の位置と接線の向き (g1) を結ぶクロソイドを，フレネル積分で終点を表して newton 法で 1 変数の方程式に帰着させ高速・高精度に求める．解説文の問題2 (g1 エルミート補間) の古典解法として引いた． bertolazzi_frego_2015_g1fittingclothoids">
+<div class="meta"><span class="no">42</span><span class="au">Bertolazzi, E.; Frego, M.</span> <span class="yr">(2015)</span></div>
+<div class="ti">G1 Fitting with Clothoids</div>
+<div class="ve">Mathematical Methods in the Applied Sciences, 38, 881–897</div>
+<div class="links"><a href="https://doi.org/10.1002/mma.3114">doi:10.1002/mma.3114</a><span class="where">解説文 4.3</span><code class="key">Bertolazzi_Frego_2015_G1FittingClothoids</code></div>
+<p>2 点の位置と接線の向き (G1) を結ぶクロソイドを，フレネル積分で終点を表して Newton 法で 1 変数の方程式に帰着させ高速・高精度に求める．解説文の問題2 (G1 エルミート補間) の古典解法として引いた．</p><div class="eq">\[\kappa(s)=\kappa_0+(\kappa_1-\kappa_0)\frac{s}{L},\qquad (x,y,\varphi)(L)=(x_1,y_1,\varphi_1)\]</div>
+</article>
+<article id="Lipp_Boyd_2014_MinimumtimeSpeedOptimisation" data-s="lipp, t.; boyd, s. minimum-time speed optimisation over a fixed path 固定した経路での最短時間の速度最適化が凸問題になることを整理し，車両 (摩擦円) の制約を含めて効率よく解いた．解説文の問題7a で verscheure らと並べて引いた． lipp_boyd_2014_minimumtimespeedoptimisation">
+<div class="meta"><span class="no">43</span><span class="au">Lipp, T.; Boyd, S.</span> <span class="yr">(2014)</span></div>
+<div class="ti">Minimum-Time Speed Optimisation over a Fixed Path</div>
+<div class="ve">International Journal of Control, 87, 1297–1311</div>
+<div class="links"><a href="https://doi.org/10.1080/00207179.2013.875224">doi:10.1080/00207179.2013.875224</a><span class="where">解説文 4.8</span><code class="key">Lipp_Boyd_2014_MinimumtimeSpeedOptimisation</code></div>
+<p>固定した経路での最短時間の速度最適化が凸問題になることを整理し，車両 (摩擦円) の制約を含めて効率よく解いた．解説文の問題7a で Verscheure らと並べて引いた．</p>
+</article>
+<article id="Verscheure_etal_2009_TimeOptimalPathTracking" data-s="verscheure, d.; demeulenaere, b.; swevers, j.; de schutter, j.; diehl, m. time-optimal path tracking for robots: a convex optimization approach 決まった経路に沿う最短時間の速度計画を，速度の 2 乗 \(b=v^2\) を変数にとって凸最適化 (二次錐計画) に帰着させた．解説文の問題7a の定式化の基礎． verscheure_etal_2009_timeoptimalpathtracking">
+<div class="meta"><span class="no">44</span><span class="au">Verscheure, D.; Demeulenaere, B.; Swevers, J.; De Schutter, J.; Diehl, M.</span> <span class="yr">(2009)</span></div>
+<div class="ti">Time-Optimal Path Tracking for Robots: A Convex Optimization Approach</div>
+<div class="ve">IEEE Transactions on Automatic Control, 54, 2318–2327</div>
+<div class="links"><a href="https://doi.org/10.1109/TAC.2009.2028959">doi:10.1109/TAC.2009.2028959</a><span class="where">解説文 4.8</span><code class="key">Verscheure_etal_2009_TimeOptimalPathTracking</code></div>
+<p>決まった経路に沿う最短時間の速度計画を，速度の 2 乗 \(b=v^2\) を変数にとって凸最適化 (二次錐計画) に帰着させた．解説文の問題7a の定式化の基礎．</p><div class="eq">\[\min_{b\ge0}\int_0^{L}b(s)^{-1/2}\,ds\quad\text{s.t.}\quad |b\kappa|\le\bar a_y,\ \ |b&#x27;/2|\le\bar a_t,\ \ \sqrt{(b&#x27;/2)^2+(b\kappa)^2}\le\bar a\]</div>
+</article>
+<h2 id="g5">5 古典的な数値解析との使い分け</h2>
+<article id="Colagrande_etal_2025_LinearAttentionGlobal" data-s="colagrande, a.; caillon, p.; feillet, e.; allauzen, a. linear attention with global context: a multipole attention mechanism for vision and physics mano: 多重極の考え方を注意機構に取り入れ，線形の計算量で大域的な相互作用を扱う作用素学習．解説文の 5 節で数値解析を取り込んだ手法の例として引いた． colagrande_etal_2025_linearattentionglobal">
+<div class="meta"><span class="no">45</span><span class="au">Colagrande, A.; Caillon, P.; Feillet, E.; Allauzen, A.</span> <span class="yr">(2025)</span></div>
+<div class="ti">Linear Attention with Global Context: A Multipole Attention Mechanism for Vision and Physics</div>
+<div class="ve">2025 IEEE/CVF International Conference on Computer Vision Workshops (ICCVW), 3130–3139</div>
+<div class="links"><a href="https://doi.org/10.1109/ICCVW69036.2025.00326">doi:10.1109/ICCVW69036.2025.00326</a><span class="where">解説文 5 · スライド</span><code class="key">Colagrande_etal_2025_LinearAttentionGlobal</code></div>
+<p>MANO: 多重極の考え方を注意機構に取り入れ，線形の計算量で大域的な相互作用を扱う作用素学習．解説文の 5 節で数値解析を取り込んだ手法の例として引いた．</p>
+</article>
+<article id="Li_etal_2020_MultipoleGraphNeural" data-s="li, z.; kovachki, n.; azizzadenesheli, k.; liu, b.; stuart, a.; bhattacharya, k.; anandkumar, a. multipole graph neural operator for parametric partial differential equations mgno: 高速多重極法の階層的な分解を neural operator に取り込み，長距離の相互作用を多段階の核で効率よく表す (neurips 2020)．解説文の 5 節で数値解析を取り込んだ手法の例として引いた． li_etal_2020_multipolegraphneural">
+<div class="meta"><span class="no">46</span><span class="au">Li, Z.; Kovachki, N.; Azizzadenesheli, K.; Liu, B.; Stuart, A.; Bhattacharya, K.; Anandkumar, A.</span> <span class="yr">(2020)</span></div>
+<div class="ti">Multipole Graph Neural Operator for Parametric Partial Differential Equations</div>
+<div class="ve">Advances in Neural Information Processing Systems, 33, 6755–6766</div>
+<div class="links"><a href="https://proceedings.neurips.cc/paper_files/paper/2020/hash/4b21cf96d4cf612f239a6c322b10c8fe-Abstract.html">URL</a><span class="where">解説文 5 · スライド</span><code class="key">Li_etal_2020_MultipoleGraphNeural</code></div>
+<p>MGNO: 高速多重極法の階層的な分解を Neural Operator に取り込み，長距離の相互作用を多段階の核で効率よく表す (NeurIPS 2020)．解説文の 5 節で数値解析を取り込んだ手法の例として引いた．</p>
+</article>
+<h2 id="g6">6 課題と展望</h2>
+<article id="Krishnapriyan_etal_2021_CharacterizingPossibleFailure" data-s="krishnapriyan, a.; gholami, a.; zhe, s.; kirby, r.; mahoney, m. characterizing possible failure modes in physics-informed neural networks 移流・反応の問題で pinn が失敗する様子を示し，原因が表現力ではなく損失の地形の悪さにあることを論じた．係数を小さい値から徐々に上げるカリキュラム学習などの対策を提案する (neurips 2021)． krishnapriyan_etal_2021_characterizingpossiblefailure">
+<div class="meta"><span class="no">47</span><span class="au">Krishnapriyan, A.; Gholami, A.; Zhe, S.; Kirby, R.; Mahoney, M.</span> <span class="yr">(2021)</span></div>
+<div class="ti">Characterizing Possible Failure Modes in Physics-Informed Neural Networks</div>
+<div class="ve">Advances in Neural Information Processing Systems, 34, 26548–26560</div>
+<div class="links"><a href="https://proceedings.neurips.cc/paper_files/paper/2021/hash/df438e5206f31600e6ae4af72f2725f1-Abstract.html">URL</a><span class="where">解説文 6, 7.1 · スライド</span><code class="key">Krishnapriyan_etal_2021_CharacterizingPossibleFailure</code></div>
+<p>移流・反応の問題で PINN が失敗する様子を示し，原因が表現力ではなく損失の地形の悪さにあることを論じた．係数を小さい値から徐々に上げるカリキュラム学習などの対策を提案する (NeurIPS 2021)．</p>
+</article>
+<article id="Lu_etal_2022_ComprehensiveFairComparison" data-s="lu, l.; meng, x.; cai, s.; mao, z.; goswami, s.; zhang, z.; karniadakis, g. e. a comprehensive and fair comparison of two neural operators (with practical extensions) based on fair data deeponet と fno を 16 の問題で公平に比較し，両者の長所と短所，fno の周期性の仮定の影響などを整理した (cmame)．解説文では作用素学習の比較・評価の整備の例として引いた． lu_etal_2022_comprehensivefaircomparison">
+<div class="meta"><span class="no">48</span><span class="au">Lu, L.; Meng, X.; Cai, S.; Mao, Z.; Goswami, S.; Zhang, Z.; Karniadakis, G. E.</span> <span class="yr">(2022)</span></div>
+<div class="ti">A Comprehensive and Fair Comparison of Two Neural Operators (with Practical Extensions) Based on FAIR Data</div>
+<div class="ve">Computer Methods in Applied Mechanics and Engineering, 393, 114778</div>
+<div class="links"><a href="https://doi.org/10.1016/j.cma.2022.114778">doi:10.1016/j.cma.2022.114778</a><span class="where">解説文 6</span><code class="key">Lu_etal_2022_ComprehensiveFairComparison</code></div>
+<p>DeepONet と FNO を 16 の問題で公平に比較し，両者の長所と短所，FNO の周期性の仮定の影響などを整理した (CMAME)．解説文では作用素学習の比較・評価の整備の例として引いた．</p>
+</article>
+<article id="McClenny_Braga-Neto_2023_SelfadaptivePhysicsinformedNeural" data-s="mcclenny, l. d.; braga-neto, u. m. self-adaptive physics-informed neural networks 自己適応 pinn: 点ごとの重みを学習変数にし，損失を θ について最小化・重みについて最大化する (敵対的) ことで，難しい点に重みを集める (j. comput. phys.)． mcclenny_braga-neto_2023_selfadaptivephysicsinformedneural">
+<div class="meta"><span class="no">49</span><span class="au">McClenny, L. D.; Braga-Neto, U. M.</span> <span class="yr">(2023)</span></div>
+<div class="ti">Self-Adaptive Physics-Informed Neural Networks</div>
+<div class="ve">Journal of Computational Physics, 474, 111722</div>
+<div class="links"><a href="https://doi.org/10.1016/j.jcp.2022.111722">doi:10.1016/j.jcp.2022.111722</a><span class="where">解説文 6</span><code class="key">McClenny_Braga-Neto_2023_SelfadaptivePhysicsinformedNeural</code></div>
+<p>自己適応 PINN: 点ごとの重みを学習変数にし，損失を θ について最小化・重みについて最大化する (敵対的) ことで，難しい点に重みを集める (J. Comput. Phys.)．</p><div class="eq">\[\min_\theta\max_{\lambda}\ \frac{1}{n_r}\sum_i m(\lambda_i)\bigl|\mathcal{N}[u_\theta](x_i)\bigr|^2+\cdots\]</div>
+</article>
+<article id="Rathore_etal_2024_ChallengesTrainingPINNs" data-s="rathore, p.; lei, w.; frangella, z.; lu, l.; udell, m. challenges in training pinns: a loss landscape perspective pinn の損失の地形が悪条件であることを解析し，adam の後に l-bfgs を使う組合せ (と nysnewton-cg) が有効であることを示した (icml 2024)．解説文の問題2 で l-bfgs が効いた理由の背景． rathore_etal_2024_challengestrainingpinns">
+<div class="meta"><span class="no">50</span><span class="au">Rathore, P.; Lei, W.; Frangella, Z.; Lu, L.; Udell, M.</span> <span class="yr">(2024)</span></div>
+<div class="ti">Challenges in Training PINNs: A Loss Landscape Perspective</div>
+<div class="ve">Proceedings of the 41st International Conference on Machine Learning, 42159–42191</div>
+<div class="links"><a href="https://proceedings.mlr.press/v235/rathore24a.html">URL</a><span class="where">解説文 6</span><code class="key">Rathore_etal_2024_ChallengesTrainingPINNs</code></div>
+<p>PINN の損失の地形が悪条件であることを解析し，Adam の後に L-BFGS を使う組合せ (と NysNewton-CG) が有効であることを示した (ICML 2024)．解説文の問題2 で L-BFGS が効いた理由の背景．</p>
+</article>
+<article id="Wang_etal_2021_EigenvectorBiasFourier" data-s="wang, s.; wang, h.; perdikaris, p. on the eigenvector bias of fourier feature networks: from regression to solving multi-scale pdes with physics-informed neural networks フーリエ特徴量ネットワークの ntk の固有ベクトルの偏りを解析し，多重スケールの pde に向けて複数の尺度の特徴量を組み合わせる pinn を提案した．解説文では多重スケールの問題への入力符号化の対策として引いた (2021b)． wang_etal_2021_eigenvectorbiasfourier">
+<div class="meta"><span class="no">51</span><span class="au">Wang, S.; Wang, H.; Perdikaris, P.</span> <span class="yr">(2021)</span></div>
+<div class="ti">On the Eigenvector Bias of Fourier Feature Networks: From Regression to Solving Multi-Scale PDEs with Physics-Informed Neural Networks</div>
+<div class="ve">Computer Methods in Applied Mechanics and Engineering, 384, 113938</div>
+<div class="links"><a href="https://doi.org/10.1016/j.cma.2021.113938">doi:10.1016/j.cma.2021.113938</a><span class="where">解説文 6 · スライド</span><code class="key">Wang_etal_2021_EigenvectorBiasFourier</code></div>
+<p>フーリエ特徴量ネットワークの NTK の固有ベクトルの偏りを解析し，多重スケールの PDE に向けて複数の尺度の特徴量を組み合わせる PINN を提案した．解説文では多重スケールの問題への入力符号化の対策として引いた (2021b)．</p>
+</article>
+<article id="Wang_etal_2021_UnderstandingMitigatingGradient" data-s="wang, s.; teng, y.; perdikaris, p. understanding and mitigating gradient flow pathologies in physics-informed neural networks pinn の損失の項ごとの勾配の大きさが大きく食い違う「勾配の病理」を示し，勾配の統計から重みを自動で調整する方法を提案した (siam j. sci. comput.)．解説文の 6 節で損失の重みの自動調整の例として引いた． wang_etal_2021_understandingmitigatinggradient">
+<div class="meta"><span class="no">52</span><span class="au">Wang, S.; Teng, Y.; Perdikaris, P.</span> <span class="yr">(2021)</span></div>
+<div class="ti">Understanding and Mitigating Gradient Flow Pathologies in Physics-Informed Neural Networks</div>
+<div class="ve">SIAM Journal on Scientific Computing, 43, A3055–A3081</div>
+<div class="links"><a href="https://doi.org/10.1137/20M1318043">doi:10.1137/20M1318043</a><span class="where">解説文 6</span><code class="key">Wang_etal_2021_UnderstandingMitigatingGradient</code></div>
+<p>PINN の損失の項ごとの勾配の大きさが大きく食い違う「勾配の病理」を示し，勾配の統計から重みを自動で調整する方法を提案した (SIAM J. Sci. Comput.)．解説文の 6 節で損失の重みの自動調整の例として引いた．</p><div class="eq">\[\hat w_b=\frac{\max_\theta|\nabla_\theta\mathcal{L}_r|}{\overline{|\nabla_\theta\mathcal{L}_b|}},\qquad w_b\leftarrow(1-\alpha)w_b+\alpha\hat w_b\]</div>
+</article>
+<article id="Wang_etal_2022_WhenWhyPINNs" data-s="wang, s.; yu, x.; perdikaris, p. when and why pinns fail to train: a neural tangent kernel perspective pinn の学習を ntk で解析し，残差項と境界項で収束の速さが大きく違うことを示した．ntk の固有値 (トレース) を揃えるように重みを選ぶ方法を提案する (j. comput. phys.)． wang_etal_2022_whenwhypinns">
+<div class="meta"><span class="no">53</span><span class="au">Wang, S.; Yu, X.; Perdikaris, P.</span> <span class="yr">(2022)</span></div>
+<div class="ti">When and Why PINNs Fail to Train: A Neural Tangent Kernel Perspective</div>
+<div class="ve">Journal of Computational Physics, 449, 110768</div>
+<div class="links"><a href="https://doi.org/10.1016/j.jcp.2021.110768">doi:10.1016/j.jcp.2021.110768</a><span class="where">解説文 6</span><code class="key">Wang_etal_2022_WhenWhyPINNs</code></div>
+<p>PINN の学習を NTK で解析し，残差項と境界項で収束の速さが大きく違うことを示した．NTK の固有値 (トレース) を揃えるように重みを選ぶ方法を提案する (J. Comput. Phys.)．</p><div class="eq">\[w_r=\frac{\operatorname{tr}K}{\operatorname{tr}K_{rr}},\qquad w_b=\frac{\operatorname{tr}K}{\operatorname{tr}K_{bb}}\]</div>
+</article>
+<article id="Wang_etal_2023_ExpertsGuideTraining" data-s="wang, s.; sankaran, s.; wang, h.; perdikaris, p. an expert&#x27;s guide to training physics-informed neural networks pinn を学習させる実践的な指針 (arxiv)．無次元化・正規化，学習率の減衰，因果性を考慮した重み付け，フーリエ特徴量などの組合せを整理している． wang_etal_2023_expertsguidetraining">
+<div class="meta"><span class="no">54</span><span class="au">Wang, S.; Sankaran, S.; Wang, H.; Perdikaris, P.</span> <span class="yr">(2023)</span></div>
+<div class="ti">An Expert&#x27;s Guide to Training Physics-Informed Neural Networks</div>
+<div class="ve">arXiv</div>
+<div class="links"><a href="https://doi.org/10.48550/arXiv.2308.08468">doi:10.48550/arXiv.2308.08468</a><span class="where">解説文 6</span><code class="key">Wang_etal_2023_ExpertsGuideTraining</code></div>
+<p>PINN を学習させる実践的な指針 (arXiv)．無次元化・正規化，学習率の減衰，因果性を考慮した重み付け，フーリエ特徴量などの組合せを整理している．</p>
+</article>
+<h2 id="g7">7 研究の歩み (年表)</h2>
+<article id="Anandkumar_etal_2020_NeuralOperatorGraph" data-s="anandkumar, a.; azizzadenesheli, k.; bhattacharya, k.; kovachki, n.; li, z.; liu, b.; stuart, a. neural operator: graph kernel network for partial differential equations gno: 積分作用素の核をグラフ上のメッセージパッシングで近似する neural operator の最初の形．解説文では年表の作用素学習の系列 (gno → fno → pino) で引いた． anandkumar_etal_2020_neuraloperatorgraph">
+<div class="meta"><span class="no">55</span><span class="au">Anandkumar, A.; Azizzadenesheli, K.; Bhattacharya, K.; Kovachki, N.; Li, Z.; Liu, B.; Stuart, A.</span> <span class="yr">(2020)</span></div>
+<div class="ti">Neural Operator: Graph Kernel Network for Partial Differential Equations</div>
+<div class="ve">ICLR 2020 Workshop on Integration of Deep Neural Models and Differential Equations</div>
+<div class="links"><a href="https://openreview.net/forum?id=fg2ZFmXFO3">URL</a><span class="where">解説文 7.1</span><code class="key">Anandkumar_etal_2020_NeuralOperatorGraph</code></div>
+<p>GNO: 積分作用素の核をグラフ上のメッセージパッシングで近似する Neural Operator の最初の形．解説文では年表の作用素学習の系列 (GNO → FNO → PINO) で引いた．</p><div class="eq">\[v_{l+1}(x)=\sigma\Bigl(W v_l(x)+\frac{1}{|N(x)|}\sum_{y\in N(x)}\kappa_\phi\bigl(x,y,a(x),a(y)\bigr)\,v_l(y)\Bigr)\]</div>
+</article>
+<article id="Goodfellow_etal_2016_DeepLearning" data-s="goodfellow, i.; bengio, y.; courville, a. deep learning 深層学習の標準的な教科書．正則化 (重み減衰など)，誤差逆伝播，最適化の基礎をまとめる．解説文では年表の「計算基盤」の項で誤差逆伝播 (1986) の参照先として引いた． goodfellow_etal_2016_deeplearning">
+<div class="meta"><span class="no">56</span><span class="au">Goodfellow, I.; Bengio, Y.; Courville, A.</span> <span class="yr">(2016)</span></div>
+<div class="ti">Deep Learning</div>
+<div class="ve">MIT Press</div>
+<div class="links"><span class="where">解説文 7.1</span><code class="key">Goodfellow_etal_2016_DeepLearning</code></div>
+<p>深層学習の標準的な教科書．正則化 (重み減衰など)，誤差逆伝播，最適化の基礎をまとめる．解説文では年表の「計算基盤」の項で誤差逆伝播 (1986) の参照先として引いた．</p>
+</article>
+<article id="Jacot_etal_2018_NeuralTangentKernel" data-s="jacot, a.; gabriel, f.; hongler, c. neural tangent kernel: convergence and generalization in neural networks ntk: 幅が無限大の極限で，勾配法による nn の学習が固定された核 (neural tangent kernel) による線形の力学になることを示した．pinn の学習の難しさ (wang ら 2022) の解析の基礎． jacot_etal_2018_neuraltangentkernel">
+<div class="meta"><span class="no">57</span><span class="au">Jacot, A.; Gabriel, F.; Hongler, C.</span> <span class="yr">(2018)</span></div>
+<div class="ti">Neural Tangent Kernel: Convergence and Generalization in Neural Networks</div>
+<div class="ve">Advances in Neural Information Processing Systems, 31</div>
+<div class="links"><a href="https://proceedings.neurips.cc/paper_files/paper/2018/hash/5a4be1fa34e62bb8a6ec6b91d2462f5a-Abstract.html">URL</a><span class="where">解説文 7.1</span><code class="key">Jacot_etal_2018_NeuralTangentKernel</code></div>
+<p>NTK: 幅が無限大の極限で，勾配法による NN の学習が固定された核 (neural tangent kernel) による線形の力学になることを示した．PINN の学習の難しさ (Wang ら 2022) の解析の基礎．</p><div class="eq">\[\frac{d}{dt}u_\theta(x)=-\sum_{i}K(x,x_i)\bigl(u_\theta(x_i)-y_i\bigr),\qquad K(x,x&#x27;)=\nabla_\theta u_\theta(x)^\top\nabla_\theta u_\theta(x&#x27;)\]</div>
+</article>
+</main></div>
+<script>
+document.getElementById('q').addEventListener('input',e=>{const v=e.target.value.toLowerCase();
+document.querySelectorAll('article').forEach(a=>{a.style.display=!v||a.dataset.s.includes(v)?'':'none'});});
+</script></body></html>

@@ -3,29 +3,37 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="talks/tools/build-index.py">
 <title>講演資料</title>
 <style>
 :root{--bg:#fbfbf8;--fg:#1f2a28;--muted:#5f6b68;--line:#d9dfdc;--accent:#2f7d6b;--chip:#eaf3f0}
 @media (prefers-color-scheme:dark){:root{--bg:#141917;--fg:#e4ebe8;--muted:#9aa7a3;--line:#2c3532;--accent:#6cc3ab;--chip:#1f2b27}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif}
-main{max-width:52rem;margin:0 auto;padding:3rem 1rem 4rem}
-header h1{font-size:1.6rem;margin:0 0 .25rem}
+main{max-width:52rem;margin:0 auto;padding:2.5rem 1rem 4rem}
+a{color:var(--accent)}
+nav.crumb{font-size:.85rem;color:var(--muted);margin-bottom:1.2rem}
+nav.crumb a{color:inherit}
+header h1{font-size:1.6rem;margin:0 0 .25rem;line-height:1.35}
 header p{margin:0;color:var(--muted)}
-article{border-top:1px solid var(--line);padding:1.5rem 0}
-article h2{font-size:1.25rem;margin:0;line-height:1.4}
-article h2 a{color:inherit;text-decoration:none}
-article h2 a:hover{color:var(--accent)}
+h2.sec{font-size:1rem;margin:2rem 0 .2rem;color:var(--muted);font-weight:600;letter-spacing:.02em}
+article{border-top:1px solid var(--line);padding:1.3rem 0}
+article h2,article h3{font-size:1.2rem;margin:0;line-height:1.4}
+article h3{font-size:1.05rem}
+article h2 a,article h3 a{color:inherit;text-decoration:none}
+article h2 a:hover,article h3 a:hover{color:var(--accent)}
 .sub{margin:.15rem 0 0;color:var(--muted)}
-.ev{margin:.5rem 0 0;font-size:.9rem;color:var(--muted)}
-.ev time{font-variant-numeric:tabular-nums}
-.abs{margin:.6rem 0 0;font-size:.95rem}
-.links{display:flex;flex-wrap:wrap;gap:.5rem;margin:.8rem 0 0;padding:0;list-style:none}
+.ev{margin:.4rem 0 0;font-size:.9rem;color:var(--muted)}
+time{font-variant-numeric:tabular-nums}
+.abs{margin:.8rem 0 0}
+.links{display:flex;flex-wrap:wrap;gap:.5rem;margin:.7rem 0 0;padding:0;list-style:none}
 .links a{display:inline-block;padding:.2rem .7rem;border-radius:999px;background:var(--chip);color:var(--accent);text-decoration:none;font-size:.9rem}
 .links a:hover{outline:1px solid var(--accent)}
-.lic{margin:.6rem 0 0;font-size:.8rem;color:var(--muted)}
-footer{border-top:1px solid var(--line);padding-top:1rem;font-size:.85rem;color:var(--muted)}
-footer a,.lic a{color:inherit}
+.note{margin:1.2rem 0 0;padding:.8rem 1rem;border-left:3px solid var(--accent);background:var(--chip);font-size:.92rem}
+.small{font-size:.82rem;color:var(--muted)}
+ul.rev{margin:.3rem 0 0;padding-left:1.2rem;font-size:.9rem}
+footer{border-top:1px solid var(--line);margin-top:2rem;padding-top:1rem;font-size:.82rem;color:var(--muted)}
+footer a{color:inherit}
 </style>
 </head>
 <body>
@@ -33,8 +41,13 @@ footer a,.lic a{color:inherit}
 <header><h1>講演資料</h1>
 <p>村田 昇の講演のスライド・配布用 PDF・解説文・デモ</p>
 </header>
-<article><p>まだ講演はない．</p></article>
-<footer>資料は CC BY-NC 4.0，コードは MIT (README)．<br>この一覧は tools/build-index.py が各講演の meta.yml から作る (2026-10-11)．</footer>
+<article id="physics-informed-ml">
+<h2><a href="physics-informed-ml/">物理を組み込む機械学習</a></h2>
+<p class="sub">データ・正則化・仮説空間に物理を入れる</p>
+<p class="ev">最新の講演: <time datetime="2026-10-19">2026-10-19</time>　第34回鉄鋼工学アドバンストセミナー　基調講演</p>
+<ul class="links"><li><a href="physics-informed-ml/2026-10-19/">最新の講演の資料</a></li><li><a href="physics-informed-ml/">解説・デモ・講演の一覧</a></li></ul>
+</article>
+<footer>資料は CC BY-NC 4.0，コードは MIT (README)．<br>この頁は tools/build-index.py が meta.yml から作る (2026-10-15)．</footer>
 </main>
 </body>
 </html>

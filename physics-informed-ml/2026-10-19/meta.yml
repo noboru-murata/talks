@@ -1,0 +1,33 @@
+# 講演の版の情報．講演の原本の meta.yml (editions) から publish.mk (make publish-edition) が作る．
+# 講演の日の翌日から固定 (talks/PUBLISHING.md)．
+edition: '2026-10-19'
+topic: physics-informed-ml
+title: 物理を組み込む機械学習
+subtitle: データ・正則化・仮説空間に物理を入れる
+date: 2026-10-19
+venue: 第34回鉄鋼工学アドバンストセミナー
+kind: 基調講演
+items:
+- kind: slides
+  path: talk/physics-informed-ml.html
+  label: スライド
+- kind: handout
+  path: talk/physics-informed-ml-handout.pdf
+  label: 配布用 PDF
+- kind: report
+  path: talk/physics-informed-ml-note.html
+  label: 解説
+- kind: report-pdf
+  path: talk/physics-informed-ml-note.pdf
+  label: 解説 (PDF)
+- kind: demo
+  path: demo/clothoid-pinn.html
+  label: デモ (この講演の版)
+- kind: demo
+  path: demo/fast-solve.html
+  label: デモ (条件付き PINN と作用素学習．この講演の版)
+license: CC-BY-NC-4.0
+publish:
+  notes: false
+  figures_cleared: true
+published: 2026-10-15
