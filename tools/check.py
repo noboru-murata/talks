@@ -59,7 +59,8 @@ REF_ATTR = re.compile(r'''\b(?:src|href|poster|data-src|data-iframe-src|data-bac
 NOTES_RE = re.compile(r'<aside\b[^>]*class="[^"]*\bnotes\b')
 CHARSET_RE = re.compile(r"""<meta\b[^>]*\bcharset\s*=|<meta\b[^>]*http-equiv\s*=\s*["']?content-type""", re.I)
 DOCTYPE_RE = re.compile(r"^\s*(?:<!--.*?-->\s*)*<!doctype\s+html", re.I | re.S)
-GENERATOR = "talks/tools/build-index.py"     # build-index が作る頁 (参照の検査はしない)
+# 道具が作る頁 (参照の検査はしない): build-index.py と，Hugo のテーマ oxq-pages (ox-quarto/samples/publish/hugo)
+GENERATORS = ("talks/tools/build-index.py", "oxq-pages (Hugo)")
 # macOS の Finder がフォルダを開くと作るファイル．.gitignore で除いてあり公開されないので，調べない
 OS_JUNK = {".DS_Store"}
 SIZE_WARN = 50 * 2**20
@@ -266,7 +267,7 @@ def check_html(root: Path, p: Path, rel: str, text: str, notes_public: bool, is_
         rep.warn(rel, "<!doctype html> がない")
     if not notes_public and NOTES_RE.search(text):
         rep.error(rel, '発表者ノート (<aside class="notes">) が残っている (publish.notes: false)')
-    if GENERATOR in text[:4096]:
+    if any(g in text[:4096] for g in GENERATORS):
         return                                        # 一覧・主題・版の頁はフォルダをまたいでよい
     for ref in REF_ATTR.findall(text):
         if not is_local_ref(ref):
