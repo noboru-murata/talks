@@ -13,7 +13,7 @@
 
 | | |
 |---|---|
-| 手元 | `~/Desktop/claude/talks/` (講演のリポジトリと同じ階層．publish.mk の既定 `PUB_ROOT = ../../talks`) |
+| 手元 | `~/Desktop/claude/talks/` (ox-quarto と同じ階層．講演のフォルダは `~/Desktop/claude/talk_materials/<講演>/`．publish.mk の既定の `PUB_ROOT` は ox-quarto の隣の talks なので，講演のフォルダの深さによらない) |
 | GitHub | https://github.com/noboru-murata/talks (public．main の / を Pages で公開) |
 | 公開の URL | https://noboru-murata.github.io/talks/ (主題の一覧) |
 | 共通の部品 | `~/Desktop/claude/ox-quarto/tools/` (publish.mk，oxq-publish.py，oxq-pdf.py --no-notes) |
@@ -94,20 +94,22 @@ push すると 1〜2 分で反映される．
 ### Makefile (例 `talk/Makefile` の最後)
 
 ```make
-PUB_ID            := physics-informed-ml
-PUB_FILES         := piml-review.html=report/physics-informed-ml-review.html \
-                     piml-review.pdf=report/physics-informed-ml-review.pdf \
-                     ../demo/clothoid-pinn.html=demo/clothoid-pinn.html
-PUB_EDITION       := 2026-10-19
-PUB_EDITION_FILES := piml.html=talk/physics-informed-ml.html \
-                     piml-handout.pdf=talk/physics-informed-ml-handout.pdf \
-                     ../demo/clothoid-pinn.html=demo/clothoid-pinn.html
+OXQ               ?= ../../../ox-quarto
+PUB_ID            := my-topic
+PUB_FILES         := companion.html=report/my-topic-companion.html \
+                     companion.pdf=report/my-topic-companion.pdf \
+                     ../demo/demo.html=demo/demo.html
+PUB_EDITION       := 2030-01-15
+PUB_EDITION_FILES := slide.html=talk/my-topic.html \
+                     slide-handout.pdf=talk/my-topic-handout.pdf \
+                     ../demo/demo.html=demo/demo.html
 include $(OXQ)/tools/publish.mk
 ```
 
 - `*_FILES` は「元のパス (Makefile から見た相対パス)=公開側のパス」の並び．
   `PUB_FILES` の右側は主題のフォルダから，`PUB_EDITION_FILES` の右側は版のフォルダから見たパス．
-- 原本のファイル名は変えなくてよい．公開側の名前は右側で決める．
+- 原本のファイル名は講演の型の一般名 (slide.org → slide.html，companion，`_meta/handoff-talks.md` の「ファイルの名前」)．公開側の名前は右側で決める．
+- `PUB_ROOT` は書かなくてよい (既定は ox-quarto と同じ階層の talks)．別の場所なら `PUB_ROOT := …`．
 - `PUB_EDITION` はいま作っている版だけ．次の講演では書き換える (過去の版の元ファイルは要らない)．
 - `.gitignore` に `_publish/` を足す．
 
@@ -119,7 +121,7 @@ include $(OXQ)/tools/publish.mk
 | `make publish-diff` / `make publish-edition-diff` | 調べたうえで，変わる所を表示するだけ |
 | `make publish-check` / `make publish-edition-check` | 仮置き場 (`_publish/`) に集めて調べるだけ |
 | `make <名前>-handout.pdf` | ノートなしの配布用 PDF (`oxq-pdf.py --no-notes`．既定は 1 頁 6 枚 (3 段 × 2 列)．org の `#+QUARTO_OPTIONS: handout-grid:4x2` (段x列) で変えられ，`PUB_HANDOUT_OPTS` (例 `--grid 4x2`，`--per-page 4`) が優先) |
-| `make talk-handout` | 同じものを短い名前で．対象は `PUB_EDITION_FILES` の左側の `*-handout.pdf` (`PUB_HANDOUT=…` で変えられる)．ノート付きの `talk-notes` と対 |
+| `make slide-handout` | 同じものを短い名前で．名前は配布用 PDF の basename (`slide-handout.pdf` なら `slide-handout`)．対象は `PUB_EDITION_FILES` の左側の `*-handout.pdf` (`PUB_HANDOUT=…` で変えられる)．前からの `make talk-handout` も同じ |
 | `make publish-qr` | 版の頁の URL (`PUB_URL_BASE/PUB_ID/PUB_EDITION/`) の QR コードを `PUB_QR` (既定 `figs/qr-edition.svg`) に作り，org に貼る `#+QUARTO_QR` の 2 行を表示する．公開の前に使える |
 
 どれも最後に `index.html` (一覧・主題・版の頁) を作り直す．そのあと talks で `git diff` を見て，
