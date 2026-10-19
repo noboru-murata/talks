@@ -123,6 +123,7 @@ include $(OXQ)/tools/publish.mk
 | `make <名前>-handout.pdf` | ノートなしの配布用 PDF (`oxq-pdf.py --no-notes`．既定は 1 頁 6 枚 (3 段 × 2 列)．org の `#+QUARTO_OPTIONS: handout-grid:4x2` (段x列) で変えられ，`PUB_HANDOUT_OPTS` (例 `--grid 4x2`，`--per-page 4`) が優先) |
 | `make slide-handout` | 同じものを短い名前で．名前は配布用 PDF の basename (`slide-handout.pdf` なら `slide-handout`)．対象は `PUB_EDITION_FILES` の左側の `*-handout.pdf` (`PUB_HANDOUT=…` で変えられる)．前からの `make talk-handout` も同じ |
 | `make publish-qr` | 版の頁の URL (`PUB_URL_BASE/PUB_ID/PUB_EDITION/`) の QR コードを `PUB_QR` (既定 `figs/qr-edition.svg`) に作り，org に貼る `#+QUARTO_QR` の 2 行を表示する．公開の前に使える |
+| `make publish-draft DRAFT=<名前>` | 議論用 (非公開) の写し `../snapshots/<名前>/` を合言葉で暗号化して drafts に置く (10)．`make draft-pass` で講演の合言葉を先に作る |
 
 どれも最後に `index.html` (一覧・主題・版の頁) を作り直す．そのあと talks で `git diff` を見て，
 ユーザーが commit と push をする．並列 (`make -j`) では動かさない．
@@ -215,3 +216,29 @@ talks で `make check` を実行すると，すべての主題とその中の版
 - 資料 (スライド・PDF・解説文): CC BY-NC 4.0 (`LICENSE`)．
 - コード (デモの html に含まれるスクリプト，`tools/`): MIT (`LICENSE-CODE`)．
 - 主題や版ごとに変えるときは meta.yml の `license` に書く．
+
+## 10. 議論用 (非公開) の写し: drafts
+
+未発表の結果を含む資料 (共同研究者との議論の途中のスライドなど) は **talks には置かない**．
+talks と別の公開リポジトリ drafts に，中身をすべて合言葉で暗号化して置く (2026-10-19)．
+
+| | |
+|---|---|
+| 手元 | `~/Desktop/claude/drafts/` (ox-quarto・talks と同じ階層) |
+| GitHub | https://github.com/noboru-murata/drafts (public．main の / を Pages で公開．中身は暗号文だけ) |
+| URL | `https://noboru-murata.github.io/drafts/<DRAFT_ID>/<名前>/` (`<DRAFT_ID>/` は写しの名前の一覧) |
+| 部品 | ox-quarto の `tools/oxq-draft.py` (publish.mk の `make publish-draft`) |
+
+- 置き方: 講演側で写しを `snapshots/<名前>/` (`talk/`，`demo/` …．名前は版と同じ `YYYY-MM-DD[-b]`) に作り，
+  talk/ で `make publish-draft DRAFT=<名前>`．drafts で commit と push はユーザーが手で．
+- 写すのは html と PDF だけ (原本・メモなどは写さない)．html は StatiCrypt，PDF は qpdf (AES-256) で暗号化する．
+  html から画像などの暗号化しないファイルを参照していれば止める (スライドは embed-resources の 1 ファイル)．
+- 合言葉は講演ごとに別．`make draft-pass` で `~/.config/oxq/drafts/<DRAFT_ID>.pass` に作る．
+  **リポジトリにも原本にも書かない**．共同研究者には URL と別の経路で伝える．
+- 頁の「この端末で覚える」は既定で印が付き，講演ごとに覚える．一度開けばスライドの中のデモや同じ講演のほかの頁も開ける．
+- `drafts/index.html` には講演の題も名前も出さない．`<DRAFT_ID>` は URL に出るので，題を明かしたくなければ
+  `DRAFT_ID := …` で別の名前にする．頁には noindex を付ける．
+- 写しは固定しない (同じ名前で出し直すと置き換わる)．talks の版の約束 (4) とは別．
+  合言葉を変えたら，その講演の写しを全部出し直す (一覧は新しい合言葉で作り直すので，古い写しは開けなくなる)．
+- 限界: 暗号文は git の履歴に残る．合言葉が漏れたら過去の写しも読める (合言葉を変えて出し直しても履歴の分は戻らない)．
+  漏れたら，合言葉を変え，必要なら drafts の履歴を消して作り直す．
