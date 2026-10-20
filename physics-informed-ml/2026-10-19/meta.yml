@@ -31,3 +31,6 @@ publish:
   notes: false
   figures_cleared: true
 published: 2026-10-15
+revisions:
+- date: 2026-10-20
+  note: 11 頁の改行の誤植 (\ が表示されていた) を直した
