@@ -220,12 +220,13 @@ talks で `make check` を実行すると，すべての主題とその中の版
 ## 10. 議論用 (非公開) の写し: drafts
 
 未発表の結果を含む資料 (共同研究者との議論の途中のスライドなど) は **talks には置かない**．
-talks と別の公開リポジトリ drafts に，中身をすべて合言葉で暗号化して置く (2026-10-19)．
+talks と別のリポジトリ drafts に，中身をすべて合言葉で暗号化して置く (2026-10-19)．
+外部の共同研究者にもラボの中にも同じ形で見せる (2026-10-26)．
 
 | | |
 |---|---|
 | 手元 | `~/Desktop/claude/drafts/` (ox-quarto・talks と同じ階層) |
-| GitHub | https://github.com/noboru-murata/drafts (public．main の / を Pages で公開．中身は暗号文だけ) |
+| GitHub | https://github.com/noboru-murata/drafts (**private**．main の / を Pages で公開 (GitHub Pro)．頁は誰でも開けるので中身は暗号文だけ) |
 | URL | `https://noboru-murata.github.io/drafts/<DRAFT_ID>/<名前>/` (`<DRAFT_ID>/` は写しの名前の一覧) |
 | 部品 | ox-quarto の `tools/oxq-draft.py` (publish.mk の `make publish-draft`) |
 
@@ -240,5 +241,8 @@ talks と別の公開リポジトリ drafts に，中身をすべて合言葉で
   `DRAFT_ID := …` で別の名前にする．頁には noindex を付ける．
 - 写しは固定しない (同じ名前で出し直すと置き換わる)．talks の版の約束 (4) とは別．
   合言葉を変えたら，その講演の写しを全部出し直す (一覧は新しい合言葉で作り直すので，古い写しは開けなくなる)．
-- 限界: 暗号文は git の履歴に残る．合言葉が漏れたら過去の写しも読める (合言葉を変えて出し直しても履歴の分は戻らない)．
-  漏れたら，合言葉を変え，必要なら drafts の履歴を消して作り直す．
+- リポジトリを private にする理由 (2026-10-26): Pages の頁は private でも公開される (閲覧を限れるのは Enterprise Cloud だけ) が，
+  git の履歴と講演の名前の並びは外から見えない．外から取れるのは今置いてある頁だけで，写しを消せばサイトからも消える．
+  GitHub Pro が切れると private のリポジトリの Pages は止まる (そのときは public にするか契約を戻す)．
+- 限界: 合言葉が漏れたら，その講演の今置いてある写しが読める．漏れたら合言葉を変えて全部の写しを出し直す
+  (一度取られた暗号文は戻らない)．研究が公開された写しは drafts から消す．
