@@ -103,8 +103,11 @@ PUB_EDITION       := 2030-01-15
 PUB_EDITION_FILES := slide.html=talk/my-topic.html \
                      slide-handout.pdf=talk/my-topic-handout.pdf \
                      ../demo/demo.html=demo/demo.html
-include $(OXQ)/tools/publish.mk
+include $(OXQ)/tools/talk.mk
 ```
+
+- 講演の talk/Makefile は ox-quarto の `samples/talk/Makefile` (雛形) を写して作る．書き出しの規則 (slide / slide-notes / companion / bib / snapshot)
+  は `tools/talk.mk` にあり，talk.mk が publish.mk も読む (2026-10-27)．前からの Makefile のように publish.mk を直接 include してもよい．
 
 - `*_FILES` は「元のパス (Makefile から見た相対パス)=公開側のパス」の並び．
   `PUB_FILES` の右側は主題のフォルダから，`PUB_EDITION_FILES` の右側は版のフォルダから見たパス．
@@ -121,7 +124,7 @@ include $(OXQ)/tools/publish.mk
 | `make publish-diff` / `make publish-edition-diff` | 調べたうえで，変わる所を表示するだけ |
 | `make publish-check` / `make publish-edition-check` | 仮置き場 (`_publish/`) に集めて調べるだけ |
 | `make <名前>-handout.pdf` | ノートなしの配布用 PDF (`oxq-pdf.py --no-notes`．既定は 1 頁 6 枚 (3 段 × 2 列)．org の `#+QUARTO_OPTIONS: handout-grid:4x2` (段x列) で変えられ，`PUB_HANDOUT_OPTS` (例 `--grid 4x2`，`--per-page 4`) が優先) |
-| `make slide-handout` | 同じものを短い名前で．名前は配布用 PDF の basename (`slide-handout.pdf` なら `slide-handout`)．対象は `PUB_EDITION_FILES` の左側の `*-handout.pdf` (`PUB_HANDOUT=…` で変えられる)．前からの `make talk-handout` も同じ |
+| `make slide-handout` | 同じものを短い名前で．名前は配布用 PDF の basename (`slide-handout.pdf` なら `slide-handout`)．対象は `PUB_EDITION_FILES` の左側の `*-handout.pdf` (版が未定で無ければ `$(TALK)-handout.pdf`．`PUB_HANDOUT=…` で変えられる)．前からの `make talk-handout` も同じ |
 | `make publish-qr` | 版の頁の URL (`PUB_URL_BASE/PUB_ID/PUB_EDITION/`) の QR コードを `PUB_QR` (既定 `figs/qr-edition.svg`) に作り，org に貼る `#+QUARTO_QR` の 2 行を表示する．公開の前に使える |
 | `make publish-draft DRAFT=<名前>` | 議論用 (非公開) の写し `../snapshots/<名前>/` を合言葉で暗号化して drafts に置く (10)．`make draft-pass` で講演の合言葉を先に作る |
 
