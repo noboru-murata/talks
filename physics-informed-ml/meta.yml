@@ -4,7 +4,7 @@ subtitle: データ・正則化・仮説空間に物理を入れる
 lang: ja
 authors:
 - name: 村田 昇
-abstract: '物理の知識を学習に組み込む機械学習 (PIML) を，データ・正則化・仮説空間という古典的な学習の枠組みの拡張として整理し， 罰則で課す PINN から構造で満たす積分層，条件から解への写像を学ぶ作用素学習までを， 道路の曲線 (クロソイド) の設計を題材にした 8 つの問題と数値実験で解説する．
+abstract: '物理の知識を学習に組み込む機械学習 (PIML) を，道路の曲線 (クロソイド) の設計を題材にした 8 つの問題を順に解きながら紹介し， 罰則で課す PINN から構造で満たす積分層，条件から解への写像を学ぶ作用素学習までの道具がどこでなぜ要るかを，損失関数の具体形と数値実験で示す． そのうえで，データ・正則化・仮説空間という古典的な学習の枠組みの拡張として 3 つのバイアスを整理し， それぞれの技術を元の提案の論文の問題 (多忠実度，対称性，Burgers 方程式，L 字の領域，振り子，作用素学習) の小さな再現とともに解説する． ここに載せるスライドと解説は 2026-10-19 の講演の拡大版で，講演の当日の版は下の講演の版にある．
 
   '
 license: CC-BY-NC-4.0
@@ -12,6 +12,18 @@ publish:
   notes: false
   figures_cleared: true
 items:
+- kind: slides
+  path: talk/physics-informed-ml.html
+  label: スライド (拡大版)
+- kind: handout
+  path: talk/physics-informed-ml-handout.pdf
+  label: 配布用 PDF (拡大版)
+- kind: report
+  path: report/physics-informed-ml-companion.html
+  label: 解説 (拡大版)
+- kind: report-pdf
+  path: report/physics-informed-ml-companion.pdf
+  label: 解説 (拡大版．PDF)
 - kind: demo
   path: demo/clothoid-pinn.html
   label: デモ
@@ -22,4 +34,4 @@ items:
   path: report/physics-informed-ml-references.html
   label: 文献ガイド (解説文で引いた文献の解説)
 id: physics-informed-ml
-updated: 2026-10-19
+updated: 2026-11-08

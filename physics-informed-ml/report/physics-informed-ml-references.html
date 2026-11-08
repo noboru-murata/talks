@@ -25,7 +25,7 @@ article p{margin:6px 0}.eq{background:var(--eq);border-radius:6px;padding:2px 10
 @media (max-width:760px){.wrap{grid-template-columns:1fr}nav{position:static}.key{margin-left:0}}
 </style></head><body>
 <header><h1>解説文「物理を組み込む機械学習」の文献ガイド</h1>
-<div class="sub">57 件．講演の解説文で引いた文献について，引いた理由と主な式をまとめたもの．節の番号は解説文の節．式は解説文の記法に合わせて書き直した抜粋で，原論文の記法とは異なる．文案は生成 AI (Claude) で作り，著者が確かめた．正確な内容は原論文で確かめてほしい．</div>
+<div class="sub">59 件．講演の解説文で引いた文献について，引いた理由と主な式をまとめたもの．節の番号は解説文の節．式は解説文の記法に合わせて書き直した抜粋で，原論文の記法とは異なる．文案は生成 AI (Claude) で作り，著者が確かめた．正確な内容は原論文で確かめてほしい．</div>
 <input id="q" type="search" placeholder="絞り込み (著者・題・語)"></header>
 <div class="wrap"><nav><a href="#g1">1 はじめに: フィジカル AI と PIML <span class="cnt">6</span></a>
 <a href="#g2">2 物理の入れ方: 3 つのバイアスと正則化 <span class="cnt">10</span></a>
@@ -33,7 +33,8 @@ article p{margin:6px 0}.eq{background:var(--eq);border-radius:6px;padding:2px 10
 <a href="#g4">4 事例研究: 制約付き曲線の設計 <span class="cnt">5</span></a>
 <a href="#g5">5 古典的な数値解析との使い分け <span class="cnt">2</span></a>
 <a href="#g6">6 課題と展望 <span class="cnt">8</span></a>
-<a href="#g7">7 研究の歩み (年表) <span class="cnt">3</span></a></nav><main>
+<a href="#g7">7 研究の歩み (年表) <span class="cnt">3</span></a>
+<a href="#g99">長い版 (companion-long) だけで引いた文献 <span class="cnt">2</span></a></nav><main>
 <h2 id="g1">1 はじめに: フィジカル AI と PIML</h2>
 <article id="Miriyev_Kovac_2020_SkillsPhysicalArtificial" data-s="miriyev, a.; kovač, m. skills for physical artificial intelligence 「フィジカル ai」を学術的な概念として提唱した論文．材料科学・機械工学・計算機科学・生物学の技能を融合して，生命のような知能を持つロボットを合成する理論と実践と位置付ける．解説文の冒頭でフィジカル ai の定義の出所として引いた． miriyev_kovac_2020_skillsphysicalartificial">
 <div class="meta"><span class="no">1</span><span class="au">Miriyev, A.; Kovač, M.</span> <span class="yr">(2020)</span></div>
@@ -439,6 +440,21 @@ article p{margin:6px 0}.eq{background:var(--eq);border-radius:6px;padding:2px 10
 <div class="ve">Advances in Neural Information Processing Systems, 31</div>
 <div class="links"><a href="https://proceedings.neurips.cc/paper_files/paper/2018/hash/5a4be1fa34e62bb8a6ec6b91d2462f5a-Abstract.html">URL</a><span class="where">解説文 7.1</span><code class="key">Jacot_etal_2018_NeuralTangentKernel</code></div>
 <p>NTK: 幅が無限大の極限で，勾配法による NN の学習が固定された核 (neural tangent kernel) による線形の力学になることを示した．PINN の学習の難しさ (Wang ら 2022) の解析の基礎．</p><div class="eq">\[\frac{d}{dt}u_\theta(x)=-\sum_{i}K(x,x_i)\bigl(u_\theta(x_i)-y_i\bigr),\qquad K(x,x&#x27;)=\nabla_\theta u_\theta(x)^\top\nabla_\theta u_\theta(x&#x27;)\]</div>
+</article>
+<h2 id="g99">長い版 (companion-long) だけで引いた文献</h2>
+<article id="Ling_etal_2016_MachineLearningStrategies" data-s="ling, j.; jones, r.; templeton, j. machine learning strategies for systems with invariance properties (解説なし) ling_etal_2016_machinelearningstrategies">
+<div class="meta"><span class="no">58</span><span class="au">Ling, J.; Jones, R.; Templeton, J.</span> <span class="yr">(2016)</span></div>
+<div class="ti">Machine Learning Strategies for Systems with Invariance Properties</div>
+<div class="ve">Journal of Computational Physics, 318, 22–35</div>
+<div class="links"><a href="https://doi.org/10.1016/j.jcp.2016.05.003">doi:10.1016/j.jcp.2016.05.003</a><span class="where">解説文 · スライド</span><code class="key">Ling_etal_2016_MachineLearningStrategies</code></div>
+<p>(解説なし)</p>
+</article>
+<article id="Meng_Karniadakis_2020_CompositeNeuralNetwork" data-s="meng, x.; karniadakis, g. e. a composite neural network that learns from multi-fidelity data: application to function approximation and inverse pde problems (解説なし) meng_karniadakis_2020_compositeneuralnetwork">
+<div class="meta"><span class="no">59</span><span class="au">Meng, X.; Karniadakis, G. E.</span> <span class="yr">(2020)</span></div>
+<div class="ti">A Composite Neural Network That Learns from Multi-Fidelity Data: Application to Function Approximation and Inverse PDE Problems</div>
+<div class="ve">Journal of Computational Physics, 401, 109020</div>
+<div class="links"><a href="https://doi.org/10.1016/j.jcp.2019.109020">doi:10.1016/j.jcp.2019.109020</a><span class="where">解説文 · スライド</span><code class="key">Meng_Karniadakis_2020_CompositeNeuralNetwork</code></div>
+<p>(解説なし)</p>
 </article>
 </main></div>
 <script>
