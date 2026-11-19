@@ -123,6 +123,11 @@ def load_meta(root: Path, rep: Report) -> dict | None:
         return None
 
 
+def item_file(path) -> str:
+    """items の path からファイルの部分を取る．デモの指定 (?set=… や #…) を付けてよい (2026-11-19)．"""
+    return re.split(r"[?#]", str(path), maxsplit=1)[0]
+
+
 def check_items(root: Path, meta: dict, rep: Report, allow_empty: bool) -> None:
     items = meta.get("items")
     if items is None or (not items and not allow_empty):
@@ -133,11 +138,12 @@ def check_items(root: Path, meta: dict, rep: Report, allow_empty: bool) -> None:
         return
     for i, it in enumerate(items):
         path = (it or {}).get("path")
+        file = item_file(path) if path else ""
         if not path:
             rep.error("meta.yml", f"items[{i}] に path がない")
-        elif ".." in Path(path).parts or path.startswith("/"):
+        elif not file or ".." in Path(file).parts or file.startswith("/") or re.match(r"^[a-z][a-z0-9+.-]*:", file):
             rep.error("meta.yml", f"items[{i}].path ({path}) はフォルダの中の相対パスにする")
-        elif not (root / path).is_file():
+        elif not (root / file).is_file():
             rep.error("meta.yml", f"items[{i}].path ({path}) のファイルがない")
         if not (it or {}).get("label"):
             rep.warn("meta.yml", f"items[{i}] に label がない (頁では kind を出す)")
@@ -169,7 +175,7 @@ def check_topic_meta(root: Path, meta: dict, rep: Report) -> None:
     if not meta.get("items"):
         rep.warn("meta.yml", "主題の items (育てていく資料) が空")
     for it in meta.get("items") or []:
-        top = Path(str((it or {}).get("path", ""))).parts[:1]
+        top = Path(item_file((it or {}).get("path", ""))).parts[:1]
         if top and EDITION_RE.fullmatch(top[0]):
             rep.error("meta.yml", f"主題の items に版の中のファイル ({it.get('path')}) を書かない")
     check_publish(meta, rep)
@@ -207,7 +213,7 @@ def check_files(root: Path, meta: dict, is_topic: bool, logos, snippets: list[st
     notes_public = bool((meta.get("publish") or {}).get("notes", False))
     # 発表者ノートの文を探す PDF: 配布用 (kind: handout) と，items に無い PDF．
     # 解説文 (report-pdf など) はノートと同じ文を含むことがあるので除く
-    kinds = {str((it or {}).get("path")): (it or {}).get("kind") for it in (meta.get("items") or [])}
+    kinds = {item_file((it or {}).get("path")): (it or {}).get("kind") for it in (meta.get("items") or [])}
     edition_dirs = set()
     if is_topic:
         for d in root.iterdir():

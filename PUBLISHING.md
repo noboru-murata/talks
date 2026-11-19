@@ -162,6 +162,8 @@ editions:                     # 講演の版．キーは版の名前 (引用符�
 ```
 
 - `kind` は `slides` `handout` `report` `report-pdf` `demo` `video` `code` のどれか (頁の既定の名前に使う)．
+- `path` にはデモの指定 (`?set=…` や `#…`) を付けてよい．check.py はその前のファイルがあるかを確かめる (2026-11-19)．
+  `?` や `:` を含む値は引用符で囲む (例 `{kind: demo, path: "demo/atlas.html?set=x", label: "デモ"}`．囲まないと YAML として読めないことがある)．
 - 公開側には，この原本から次の 2 つが作られる (手で書かない):
   - `<主題>/meta.yml`: `editions` を除いたもの＋ `id`・`updated`．版の一覧は持たない (build-index がフォルダから集める)．
   - `<主題>/<版>/meta.yml`: その版の項目＋ `edition`・`topic`・`date`・`title`・`license`・`publish` (主題の値を引き継ぎ，
