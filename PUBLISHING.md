@@ -24,7 +24,7 @@ push すると 1〜2 分で反映される．
 
 同じ主題の資料は，講演を重ねるたびに拡張版として増えていく．そこで二つに分ける．
 
-- **主題** (`<主題>/`): 解説文・デモなど**育てていくもの**．常に最新．一覧には主題が 1 つだけ出る．
+- **主題** (`<主題>/`): 解説文・デモなど**加筆していくもの**．常に最新．一覧には主題が 1 つだけ出る．
 - **講演の版** (`<主題>/<版>/`): その講演で見せたスライド・配布物．**講演の場で見せた URL の先が
   後から変わらない**よう，講演の日の翌日から固定する (4)．
 
@@ -36,7 +36,7 @@ push すると 1〜2 分で反映される．
     └── physics-informed-ml/        主題 (id)
         ├── index.html              主題の頁 (build-index が作る): 概要，最新の資料，講演の版の一覧
         ├── meta.yml                主題の情報 (make publish が書く)
-        ├── report/…  demo/…        育てていく資料 (make publish が書く)
+        ├── report/…  demo/…        加筆していく資料 (make publish が書く)
         └── 2026-10-19/             講演の版 (make publish-edition が書く)
             ├── index.html          版の頁 (build-index が作る): その講演の資料，最新の資料への案内，訂正の記録
             ├── meta.yml            版の情報
@@ -80,7 +80,7 @@ push すると 1〜2 分で反映される．
   `make publish-edition PUB_FIX="図 3 の出典を追記"` のように理由を付けて実行する．
   - ファイルの追加・削除・改名はできない (URL を変えないため)．並びが変われば止まる．
   - 理由は版の `meta.yml` の `revisions` に記録され，版の頁に「訂正の記録」として出る．
-- 内容を足したい・作り直したいときは，主題の部分 (`make publish`) を育てるか，次の講演の版にする．
+- 内容を足したい・作り直したいときは，主題の部分 (`make publish`) に加筆するか，次の講演の版にする．
 - 権利上の理由でファイルそのものを消さなければならないときは，手で talks から消して commit し，
   消した理由を commit の文に書く (例外中の例外)．
 
@@ -146,7 +146,7 @@ license: CC-BY-NC-4.0
 publish:                      # 既定．版ごとに上書きできる
   notes: false                # 発表者ノートを公開するか．既定 false
   figures_cleared: true       # 他人の図の引用を確かめたら true (8 の人の確認)．true でないと公開できない
-items:                        # 主題の部分 (育てていくもの)．path は <主題>/ から見た相対パス
+items:                        # 主題の部分 (加筆していくもの)．path は <主題>/ から見た相対パス
   - {kind: report,     path: report/physics-informed-ml-review.html, label: 解説}
   - {kind: report-pdf, path: report/physics-informed-ml-review.pdf,  label: 解説 (PDF)}
   - {kind: demo,       path: demo/clothoid-pinn.html,                label: デモ}

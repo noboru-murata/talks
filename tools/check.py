@@ -173,7 +173,7 @@ def check_topic_meta(root: Path, meta: dict, rep: Report) -> None:
         rep.error("meta.yml", "主題の meta.yml に editions を書かない (版は版のフォルダの meta.yml)")
     check_items(root, meta, rep, allow_empty=True)
     if not meta.get("items"):
-        rep.warn("meta.yml", "主題の items (育てていく資料) が空")
+        rep.warn("meta.yml", "主題の items (加筆していく資料) が空")
     for it in meta.get("items") or []:
         top = Path(item_file((it or {}).get("path", ""))).parts[:1]
         if top and EDITION_RE.fullmatch(top[0]):
