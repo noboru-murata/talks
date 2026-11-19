@@ -1,0 +1,16 @@
+# 主題の情報．講演の原本の meta.yml から publish.mk (make publish) が作る．
+title: 機械学習と情報幾何
+subtitle: 確率分布の空間の双対な幾何とその使われ方
+lang: ja
+authors:
+- name: 村田 昇
+abstract: '機械学習の多くの手続きは，データから作った経験分布に最も近い確率分布を，学習器と対応づけた確率分布の族の中から探す問題と考えることができる． 情報幾何の概念 (Fisher 計量，双対接続，Bregman 情報量，Pythagoras の定理と射影) を概説し， それらが自然勾配法，EM アルゴリズムとその仲間，集団学習 (バギングとブースティング) でどのように使われているかを紹介する．
+
+  '
+license: CC-BY-NC-4.0
+publish:
+  notes: false
+  figures_cleared: true
+items: []
+id: information-geometry-ml
+updated: 2026-11-19
