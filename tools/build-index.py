@@ -229,7 +229,7 @@ def edition_page(root: Path, site: dict, t: dict, ed: dict) -> None:
     body.append('<h2 class="sec">この講演の資料</h2>')
     body.append(chips(ed.get("items")))
     note = (f'この頁の資料は講演の時点のまま固定している．'
-            f'育てている最新の解説・デモは <a href="../">{e(m.get("title"))}</a> の頁にある．')
+            f'加筆した最新の解説・デモは <a href="../">{e(m.get("title"))}</a> の頁にある．')
     body.append(f'<p class="note">{note}</p>')
     if m.get("items"):
         body.append(chips(m["items"], "../"))
