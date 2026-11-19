@@ -20,8 +20,14 @@ items:
 - kind: report-pdf
   path: talk/llm-atlas-abstract.pdf
   label: アブスト (PDF)
+- kind: demo
+  path: demo/atlas.html?set=akatsuka-100
+  label: デモ (100 個の LLM の地図)
 license: CC-BY-NC-4.0
 publish:
   notes: false
   figures_cleared: true
 published: 2026-11-19
+revisions:
+- date: 2026-11-19
+  note: デモのデータの注記を直し，版の頁にデモへのリンクを足した
