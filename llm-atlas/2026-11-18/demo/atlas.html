@@ -1,0 +1,1153 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<script>/* 明暗の既定は明 (OS の設定には従わない)．?theme=dark で暗く開く */
+(function () { var t = new URLSearchParams(location.search).get('theme'); document.documentElement.dataset.theme = t === 'dark' ? 'dark' : 'light'; })();</script>
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LLM Atlas Viewer</title>
+<!--
+  atlas.html — 座標の CSV を読んで地図を表示するだけのビューア (座標の計算はしない)．
+  使い方と CSV の形は README.org．Plotly は vendor/ に同梱 (ネットなしで動く)．
+-->
+<script src="vendor/plotly-2.35.2.min.js"></script>
+<script src="sample/sample.js"></script>
+<script>/* ?set=名前 で sets/名前.js (window.ATLAS_SET) を読む */
+(function () { var n = new URLSearchParams(location.search).get("set"); if (n && /^[\w-]+$/.test(n)) document.write('<script src="sets/' + n + '.js"><\/script>'); })();</script>
+<style>
+:root {
+  color-scheme: light;
+  --surface-0: #f4f3f0;
+  --surface-1: #fcfcfb;
+  --surface-2: #efeeea;
+  --line: #dddbd5;
+  --grid: #e9e7e2;
+  --text-primary: #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted: #7c7b76;
+  --accent: #2a78d6;
+  --dim: #c9c7c0;
+  --other: #9a9893;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100;
+  --s5: #e87ba4; --s6: #008300; --s7: #6250d6; --s8: #e34948;
+  --seq-lo: #cde2fb; --seq-mid: #3987e5; --seq-hi: #0d366b;
+  --ring: #0b0b0b;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --surface-0: #121211; --surface-1: #1a1a19; --surface-2: #242422;
+    --line: #34332f; --grid: #2a2a27;
+    --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #8f8e86;
+    --accent: #3987e5; --dim: #3d3c38; --other: #77766f;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+    --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767;
+    --seq-lo: #104281; --seq-mid: #3987e5; --seq-hi: #cde2fb;
+    --ring: #f0efec;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface-0: #121211; --surface-1: #1a1a19; --surface-2: #242422;
+  --line: #34332f; --grid: #2a2a27;
+  --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #8f8e86;
+  --accent: #3987e5; --dim: #3d3c38; --other: #77766f;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+  --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767;
+  --seq-lo: #104281; --seq-mid: #3987e5; --seq-hi: #cde2fb;
+  --ring: #f0efec;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: var(--surface-0); color: var(--text-primary);
+  font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", "Segoe UI", sans-serif;
+  display: grid; grid-template-rows: auto 1fr; overflow: hidden;
+}
+header {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 8px 16px; border-bottom: 1px solid var(--line); background: var(--surface-1);
+}
+header h1 { font-size: 16px; margin: 0 8px 0 0; font-weight: 600; }
+header .grow { flex: 1; }
+button, select, input[type=search], input[type=number] {
+  font: inherit; color: var(--text-primary); background: var(--surface-1);
+  border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px;
+}
+button { cursor: pointer; }
+button:hover { background: var(--surface-2); }
+button.on { border-color: var(--accent); color: var(--accent); }
+.seg { display: inline-flex; }
+.seg button { border-radius: 0; margin-left: -1px; }
+.seg button:first-child { border-radius: 6px 0 0 6px; margin-left: 0; }
+.seg button:last-child { border-radius: 0 6px 6px 0; }
+main { display: grid; grid-template-columns: 300px 1fr; min-height: 0; }
+aside {
+  border-right: 1px solid var(--line); background: var(--surface-1);
+  overflow-y: auto; padding: 12px 14px; min-height: 0;
+}
+aside h2 { font-size: 12px; font-weight: 600; color: var(--text-secondary); margin: 14px 0 6px; letter-spacing: .04em; }
+aside h2:first-child { margin-top: 0; }
+aside select, aside input[type=search] { width: 100%; }
+.muted { color: var(--text-muted); font-size: 12px; }
+.row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+#legend .item { display: flex; align-items: center; gap: 6px; padding: 1px 0; cursor: pointer; user-select: none; }
+#legend .item.off { opacity: .4; }
+#legend .sw { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+#legend .n { margin-left: auto; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+#legend .bar { height: 10px; border-radius: 3px; margin: 4px 0 2px; }
+.card { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; background: var(--surface-1); }
+.card table { border-collapse: collapse; width: 100%; font-size: 12px; }
+.card td { padding: 1px 4px 1px 0; vertical-align: top; word-break: break-all; }
+.card td:first-child { color: var(--text-muted); white-space: nowrap; word-break: normal; }
+.card .title { font-weight: 600; word-break: break-all; }
+.nb { font-size: 12px; columns: 2; column-gap: 10px; }
+.nb div { break-inside: avoid; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nb .both { font-weight: 600; }
+.link { color: var(--accent); cursor: pointer; text-decoration: underline; }
+#sellist div { cursor: pointer; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#panes { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line); min-height: 0; }
+#panes.single { grid-template-columns: 1fr; }
+#panes.single .pane[data-p="b"] { display: none; }
+.pane .cond { max-width: 26em; font: inherit; }
+.pane .evalv { position: absolute; left: 10px; bottom: 6px; z-index: 5; font-size: 13px; color: var(--text-muted); background: var(--surface-1); padding: 1px 6px; border-radius: 4px; pointer-events: none; }
+.pane { display: grid; grid-template-rows: auto 1fr; background: var(--surface-1); min-width: 0; min-height: 0; position: relative; }
+.pane .bar { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; padding: 6px 10px; border-bottom: 1px solid var(--line); font-size: 12px; }
+.pane .bar .name { font-weight: 600; font-size: 13px; margin-right: 4px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pane .bar select { padding: 1px 4px; font-size: 12px; }
+.plot { min-height: 0; min-width: 0; }
+.drop {
+  position: absolute; inset: 40px 0 0 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  color: var(--text-secondary); text-align: center; padding: 24px; pointer-events: none;
+}
+.pane.dragover .drop, .pane.empty .drop { pointer-events: auto; }
+.pane.dragover { outline: 2px dashed var(--accent); outline-offset: -4px; }
+.pane:not(.empty):not(.dragover) .drop { display: none; }
+.pane.dragover .drop { background: color-mix(in srgb, var(--surface-1) 85%, transparent); }
+#compare { font-size: 12px; color: var(--text-secondary); }
+#timebox input[type=range] { width: 100%; margin: 4px 0 0; accent-color: var(--accent); }
+#timebox .now { font-variant-numeric: tabular-nums; font-weight: 600; }
+.pane .bar .cams button { padding: 1px 6px; font-size: 12px; }
+.pane .bar .cams[hidden] { display: none; }
+.pane .bar label.tl.off { opacity: .4; }
+#toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--text-primary); color: var(--surface-1);
+  padding: 6px 12px; border-radius: 6px; font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+#toast.show { opacity: .92; }
+input[type=file] { display: none; }
+@media (max-width: 860px) {
+  body { overflow: auto; }
+  main { grid-template-columns: 1fr; }
+  aside { border-right: 0; border-bottom: 1px solid var(--line); order: 2; }
+  #panes, #panes.single { grid-template-columns: 1fr; grid-auto-rows: 70vh; }
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>LLM Atlas Viewer</h1>
+  <span class="seg" title="地図の枚数">
+    <button id="lay1">1 枚</button><button id="lay2" class="on">2 枚</button>
+  </span>
+  <button id="sampleBtn" title="作り物のデータで試す">サンプル</button>
+  <span id="compare"></span>
+  <span class="grow"></span>
+  <button id="themeBtn" title="明暗の切替">明暗</button>
+</header>
+<main>
+  <aside>
+    <h2>検索</h2>
+    <input type="search" id="search" list="idlist" placeholder="id・名前 (Enter で選択)">
+    <datalist id="idlist"></datalist>
+
+    <h2>色分け</h2>
+    <select id="colorBy"></select>
+    <div class="row" style="margin-top:6px">
+      <label class="muted"><input type="checkbox" id="hideOff"> 絞り込みで外した点を隠す</label>
+    </div>
+    <div class="row">
+      <label class="muted">点の大きさ <input type="number" id="ptSize" min="3" max="20" value="8" style="width:56px"></label>
+      <label class="muted"><input type="checkbox" id="showLabels" checked> 選んだ点に名前</label>
+    </div>
+    <div id="legend" style="margin-top:8px"></div>
+
+    <h2>時間</h2>
+    <div id="timebox" class="muted">時間の列 (release_date，date，year など) があると使える．</div>
+
+    <h2>選んだ点</h2>
+    <div id="selbox" class="muted">点をクリック (Shift で追加)，または 2D の地図で投げ縄・矩形で囲む．</div>
+
+    <h2>詳細</h2>
+    <div id="cardbox" class="muted">点をクリックすると表示．</div>
+  </aside>
+  <section id="panes">
+    <div class="pane empty" data-p="a">
+      <div class="bar">
+        <span class="name">A</span>
+        <select class="cond" hidden title="地図の作り方 (特徴量)"></select>
+        <button class="open">CSV を開く</button>
+        <label>x <select class="cx"></select></label>
+        <label>y <select class="cy"></select></label>
+        <label>z <select class="cz"></select></label>
+        <label class="tl off" title="時間を 3 本目の軸 (縦) にする．2 次元の地図が時間の順に積み重なる"><input type="checkbox" class="ct" disabled> 時間軸</label>
+        <span class="cams seg" hidden><button data-cam="top" title="時間の軸に沿って上から (元の 2 次元の地図)">上</button><button data-cam="side" title="横から (時間が縦)">横</button><button data-cam="iso" title="斜めから">斜</button></span>
+        <button class="fit" title="全体を表示">全体</button>
+        <input type="file" accept=".csv,.tsv,.txt,text/csv">
+      </div>
+      <div class="evalv" hidden></div>
+      <div class="plot"></div>
+      <div class="drop"><div>座標の CSV をここへドロップ</div><div class="muted">または「CSV を開く」．列の形は README.org</div></div>
+    </div>
+    <div class="pane empty" data-p="b">
+      <div class="bar">
+        <span class="name">B</span>
+        <select class="cond" hidden title="地図の作り方 (特徴量)"></select>
+        <button class="open">CSV を開く</button>
+        <label>x <select class="cx"></select></label>
+        <label>y <select class="cy"></select></label>
+        <label>z <select class="cz"></select></label>
+        <label class="tl off" title="時間を 3 本目の軸 (縦) にする．2 次元の地図が時間の順に積み重なる"><input type="checkbox" class="ct" disabled> 時間軸</label>
+        <span class="cams seg" hidden><button data-cam="top" title="時間の軸に沿って上から (元の 2 次元の地図)">上</button><button data-cam="side" title="横から (時間が縦)">横</button><button data-cam="iso" title="斜めから">斜</button></span>
+        <button class="fit" title="全体を表示">全体</button>
+        <input type="file" accept=".csv,.tsv,.txt,text/csv">
+      </div>
+      <div class="evalv" hidden></div>
+      <div class="plot"></div>
+      <div class="drop"><div>比べる地図の CSV をここへドロップ</div><div class="muted">同じ id の点が A と連動する</div></div>
+    </div>
+  </section>
+</main>
+<div id="toast"></div>
+
+<script>
+"use strict";
+// ============================================================ 状態
+var PANES = ["a", "b"];
+var S = {
+  maps: { a: null, b: null },      // {name, header, rows:[obj], byId:Map, xcol, ycol, zcol, numeric:{col:bool}}
+  attrs: new Map(),                // id -> {col: value} (A を優先，B で補う)
+  attrCols: [], attrNumeric: {},   // 属性の列と，数値かどうか
+  colorBy: "", hidden: new Set(),  // 絞り込みで外した値 (カテゴリのとき)
+  cats: [],                        // [{v, n, color}] (色分けのカテゴリ．件数順に 8 色，残りは「その他」)
+  selected: new Set(), focus: null, hoverId: null,
+  layout: 2, ptSize: 8, hideOff: false, showLabels: true,
+  idLabel: new Map(),
+  knnScore: null,
+  // 時間: col (列), byId (id → 小数の年), min/max, isDate, mode ("all" すべて / "cum" t まで / "win" t の前 win 年), t, win,
+  //       parentCol (系譜の列), lineage (系譜の線), slices (年ごとの断面)
+  time: { col: "", byId: new Map(), min: 0, max: 0, isDate: false, mode: "all", t: 0, win: 1, parentCol: "", lineage: true, slices: true, timer: null },
+  // 時間で色分け: timeShade = 系列 (区分) の色を残し，古いほど淡くする．timeKeep = 「系列の色を残す」(既定は残す)
+  timeShade: false, timeKeep: true,
+};
+var TIME_NAMES = ["release_date", "released", "release", "date", "created", "created_at", "published", "year", "time", "t"];
+var PARENT_NAMES = ["parent", "parent_id", "base_model", "base", "finetuned_from", "derived_from"];
+var ID_NAMES = ["id", "model", "model_id", "name", "repo", "hf_id"];
+var LABEL_NAMES = ["label", "short", "short_name", "display", "name"];
+var URL_NAMES = ["url", "link", "href"];
+var HF_NAMES = ["hf_id", "repo", "hf_repo"];
+var MAX_CATS = 8;
+
+function css(v) { return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+function $(s, r) { return (r || document).querySelector(s); }
+function $$(s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
+function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+function toast(msg) { var t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toast.t); toast.t = setTimeout(function () { t.classList.remove("show"); }, 2600); }
+function isNum(v) { return v !== "" && v != null && isFinite(Number(v)); }
+function fmt(v) {
+  if (!isNum(v)) return v; var x = Number(v);
+  if (Number.isInteger(x)) return String(x);
+  return Math.abs(x) >= 1000 ? x.toFixed(1) : x.toPrecision(4).replace(/(\.\d*?)0+$/, "$1").replace(/\.$/, "");
+}
+
+// ============================================================ 時間
+// 年 (2024)，年月 (2024-03)，年月日 (2024-03-15，2024/3/15) を小数の年にする．それ以外の数値はそのまま
+function parseTime(v) {
+  if (v == null || v === "") return null;
+  var m = String(v).trim().match(/^(\d{4})(?:[-\/.](\d{1,2})(?:[-\/.](\d{1,2}))?)?/);
+  if (m && (m[2] || !isNum(v) || (Number(v) >= 1900 && Number(v) <= 2200 && Number.isInteger(Number(v))))) {
+    var y = +m[1], mo = m[2] ? +m[2] - 1 : 0, d = m[3] ? +m[3] : 1;
+    var t0 = Date.UTC(y, 0, 1), t1 = Date.UTC(y + 1, 0, 1), tt = Date.UTC(y, mo, d);
+    return y + (tt - t0) / (t1 - t0);
+  }
+  return isNum(v) ? Number(v) : null;
+}
+function fmtTime(t) {
+  if (t == null || !isFinite(t)) return "";
+  if (!S.time.isDate) return fmt(Math.round(t * 100) / 100);
+  var y = Math.floor(t), mo = Math.floor((t - y) * 12 + 1e-6) + 1;
+  return y + "-" + (mo < 10 ? "0" : "") + mo;
+}
+function detectTime() {
+  var T = S.time, old = T.col;
+  var cand = S.attrCols.filter(function (h) { return TIME_NAMES.indexOf(h.toLowerCase()) >= 0; });
+  cand.sort(function (a, b) { return TIME_NAMES.indexOf(a.toLowerCase()) - TIME_NAMES.indexOf(b.toLowerCase()); });
+  if (old && S.attrCols.indexOf(old) >= 0) cand.unshift(old);
+  T.col = ""; T.byId = new Map();
+  for (var k = 0; k < cand.length; k++) {
+    var col = cand[k], by = new Map(), n = 0, dateLike = false;
+    S.attrs.forEach(function (o, id) { var t = parseTime(o[col]); if (t != null) { by.set(id, t); n++; if (/[-\/]/.test(o[col])) dateLike = true; } });
+    if (n >= Math.max(2, S.attrs.size * 0.3)) { T.col = col; T.byId = by; T.isDate = dateLike || (S.attrNumeric[col] === true && Array.from(by.values()).every(function (t) { return t >= 1900 && t <= 2200; })); break; }
+  }
+  if (T.col) {
+    var ts = Array.from(T.byId.values());
+    T.min = Math.min.apply(null, ts); T.max = Math.max.apply(null, ts);
+    if (T.col !== old) { T.t = T.max; T.mode = "all"; }
+    T.t = Math.min(Math.max(T.t, T.min), T.max);
+  }
+  T.parentCol = findCol(S.attrCols, PARENT_NAMES) || "";
+}
+function timeOf(id) { return S.time.col ? S.time.byId.get(id) : undefined; }
+// 時間の絞り込みで外れるか (時間の無い点は外さない)
+function timeOff(id) {
+  var T = S.time, t = timeOf(id);
+  if (!T.col || T.mode === "all" || t == null) return false;
+  if (t > T.t + 1e-9) return true;
+  return T.mode === "win" && t < T.t - T.win - 1e-9;
+}
+
+// ============================================================ CSV
+function parseCSV(text) {
+  text = text.replace(/^﻿/, "");
+  var first = text.split(/\r?\n/, 1)[0];
+  var sep = (first.split("\t").length > first.split(",").length) ? "\t" : ",";
+  var rows = [], row = [], f = "", q = false, i = 0, n = text.length, c;
+  while (i < n) {
+    c = text[i];
+    if (q) {
+      if (c === '"') { if (text[i + 1] === '"') { f += '"'; i++; } else q = false; }
+      else f += c;
+    } else if (c === '"') q = true;
+    else if (c === sep) { row.push(f); f = ""; }
+    else if (c === "\n" || c === "\r") {
+      if (c === "\r" && text[i + 1] === "\n") i++;
+      row.push(f); f = ""; if (row.length > 1 || row[0] !== "") rows.push(row); row = [];
+    } else f += c;
+    i++;
+  }
+  if (f !== "" || row.length) { row.push(f); rows.push(row); }
+  if (!rows.length) throw new Error("空の CSV");
+  var header = rows[0].map(function (h, k) { return h.trim() || ("col" + (k + 1)); });
+  var data = rows.slice(1).map(function (r) {
+    var o = {}; header.forEach(function (h, k) { o[h] = (r[k] == null ? "" : r[k].trim()); }); return o;
+  });
+  return { header: header, rows: data };
+}
+
+function findCol(header, names) {
+  var low = header.map(function (h) { return h.toLowerCase(); });
+  for (var k = 0; k < names.length; k++) { var j = low.indexOf(names[k]); if (j >= 0) return header[j]; }
+  return null;
+}
+
+// 座標の列の推定: x/y/z → 名前に番号の付いた数値列 (tsne1, umap_2, PC1, PHATE1 …) → 最初の数値列
+function guessCoords(header, numeric, idCol) {
+  var nums = header.filter(function (h) { return numeric[h] && h !== idCol; });
+  var low = function (h) { return h.toLowerCase(); };
+  var x = nums.find(function (h) { return low(h) === "x"; }), y = nums.find(function (h) { return low(h) === "y"; });
+  var z = nums.find(function (h) { return low(h) === "z"; });
+  if (x && y) return [x, y, z || ""];
+  var re = /^(.*?)[\s_\-.]?([123])$/;
+  var groups = {};
+  nums.forEach(function (h) { var m = low(h).match(re); if (m && /(tsne|t-sne|umap|phate|pc|pca|mds|dim|comp|component|coord|emb|isomap|lle|axis|x)$/.test(m[1])) { (groups[m[1]] = groups[m[1]] || {})[m[2]] = h; } });
+  for (var g in groups) if (groups[g]["1"] && groups[g]["2"]) return [groups[g]["1"], groups[g]["2"], groups[g]["3"] || ""];
+  if (nums.length >= 2) return [nums[0], nums[1], ""];
+  return ["", "", ""];
+}
+
+function loadSetMap(p, id) {
+  var st = window.ATLAS_SET, e = st && st.maps[id]; if (!e) return;
+  loadMap(p, e.label, e.csv);
+  var pane = $('.pane[data-p="' + p + '"]'), m = S.maps[p]; if (!m) return;
+  m.setId = id; m.xcol = "x"; m.ycol = "y"; m.zcol = "";   // 既定は 2 次元の地図 (3 次元は x3, y3, z)
+  $(".cond", pane).value = id; setupPaneBar(p); refreshAll(true);
+  var v = e.eval, box = $(".evalv", pane);
+  box.hidden = !v;
+  if (v) box.textContent = "最近傍が同じ系列 " + Math.round(v.family * 100) + "%　MDS の Stress " + v.stress.toFixed(3) + "　距離の順位相関 " + v.rank.toFixed(3);
+}
+function loadMap(p, name, text) {
+  var t;
+  try { t = parseCSV(text); } catch (e) { toast(name + ": 読めません (" + e.message + ")"); return; }
+  var numeric = {};
+  t.header.forEach(function (h) {
+    var vals = t.rows.map(function (r) { return r[h]; }).filter(function (v) { return v !== ""; });
+    numeric[h] = vals.length > 0 && vals.every(isNum);
+  });
+  var idCol = findCol(t.header, ID_NAMES) || t.header[0];
+  var seen = new Set(), dup = 0;
+  var rows = t.rows.filter(function (r) { if (r[idCol] === "" || seen.has(r[idCol])) { dup++; return false; } seen.add(r[idCol]); return true; });
+  var c = guessCoords(t.header, numeric, idCol);
+  var m = { name: name, header: t.header, rows: rows, byId: new Map(), idCol: idCol, numeric: numeric, xcol: c[0], ycol: c[1], zcol: c[2] };
+  rows.forEach(function (r) { m.byId.set(r[idCol], r); });
+  S.maps[p] = m;
+  if (dup) toast(name + ": id が空か重複の行 " + dup + " を飛ばした");
+  if (p === "b" && S.layout === 1) setLayout(2);
+  rebuildAttrs(); setupPaneBar(p); refreshAll(true);
+}
+
+// 属性は A と B を id で結合する (A を優先)．座標の列と id の列は属性から外す
+function rebuildAttrs() {
+  var attrs = new Map(), cols = [], numeric = {}, idLabel = new Map();
+  PANES.forEach(function (p) {
+    var m = S.maps[p]; if (!m) return;
+    var skip = new Set([m.idCol, m.xcol, m.ycol, m.zcol]);
+    m.header.forEach(function (h) {
+      if (skip.has(h)) return;
+      if (cols.indexOf(h) < 0) { cols.push(h); numeric[h] = m.numeric[h]; } else numeric[h] = numeric[h] && m.numeric[h];
+    });
+    m.rows.forEach(function (r) {
+      var id = r[m.idCol], o = attrs.get(id) || {};
+      m.header.forEach(function (h) { if (!skip.has(h) && (o[h] == null || o[h] === "")) o[h] = r[h]; });
+      attrs.set(id, o);
+    });
+  });
+  var lab = findCol(cols, LABEL_NAMES);
+  attrs.forEach(function (o, id) { idLabel.set(id, (lab && o[lab]) || id); });
+  S.attrs = attrs; S.attrCols = cols; S.attrNumeric = numeric; S.idLabel = idLabel; S.labelCol = lab;
+  detectTime();
+  // 数値でも値の種類が少ない列 (年など) はカテゴリとしても使えるよう，選択肢は「列名」と「列名 (区分)」
+  var sel = $("#colorBy"), cur = S.colorBy;
+  var opts = ['<option value="">(なし)</option>'];
+  if (S.time.col) opts.push('<option value="time:">時間 (' + esc(S.time.col) + ')</option>');
+  cols.forEach(function (h) {
+    if (h === lab || h === S.time.col || h === S.time.parentCol) return;
+    if (numeric[h]) {
+      opts.push('<option value="num:' + esc(h) + '">' + esc(h) + ' (数値)</option>');
+      var u = new Set(); attrs.forEach(function (o) { if (o[h] !== "" && o[h] != null) u.add(o[h]); });
+      if (u.size <= 12) opts.push('<option value="cat:' + esc(h) + '">' + esc(h) + ' (区分)</option>');
+    } else opts.push('<option value="cat:' + esc(h) + '">' + esc(h) + '</option>');
+  });
+  sel.innerHTML = opts.join("");
+  var vals = $$("option", sel).map(function (o) { return o.value; });
+  if (vals.indexOf(cur) < 0 || (!cur && !S.colorTouched)) {
+    // 既定: 最初のカテゴリの列 (family など)
+    cur = vals.find(function (v) { return v.indexOf("cat:") === 0 && !S.attrNumeric[v.slice(4)]; }) || "";
+  }
+  sel.value = cur; setColorBy(cur, true);
+  $("#idlist").innerHTML = Array.from(idLabel.entries()).slice(0, 5000).map(function (e) {
+    return '<option value="' + esc(e[0]) + '">' + (e[1] !== e[0] ? esc(e[1]) : "") + '</option>';
+  }).join("");
+  renderTimeBox();
+  computeKnnScore();
+}
+
+// ============================================================ 色
+function setColorBy(v, quiet) {
+  if (v !== S.colorBy) S.hidden = new Set();
+  S.colorBy = v; S.cats = [];
+  if (v.indexOf("cat:") === 0) {
+    var col = v.slice(4), cnt = new Map();
+    S.attrs.forEach(function (o) { var x = (o[col] == null || o[col] === "") ? "(空)" : o[col]; cnt.set(x, (cnt.get(x) || 0) + 1); });
+    var arr = Array.from(cnt.entries());
+    // 色は件数順 (同数なら値の順) に固定で割り当てる．絞り込みで塗り直さない
+    arr.sort(function (p, q) { return q[1] - p[1] || String(p[0]).localeCompare(String(q[0]), "ja", { numeric: true }); });
+    var slots = arr.length > MAX_CATS ? MAX_CATS - 1 : MAX_CATS;
+    S.cats = arr.map(function (e, k) { return { v: e[0], n: e[1], slot: k < slots ? k + 1 : 0 }; });
+  }
+  renderLegend();
+  if (!quiet) refreshAll();
+}
+function catColor(c) { return c.slot ? css("--s" + c.slot) : css("--other"); }
+function catOf(id) {
+  var col = S.colorBy.slice(4), o = S.attrs.get(id) || {}, x = (o[col] == null || o[col] === "") ? "(空)" : o[col];
+  for (var k = 0; k < S.cats.length; k++) if (S.cats[k].v === x) return S.cats[k];
+  return null;
+}
+function isOff(id) {
+  if (timeOff(id)) return true;
+  if (S.colorBy.indexOf("cat:") !== 0 || !S.hidden.size) return false;
+  var c = catOf(id); if (!c) return false;
+  return S.hidden.has(c.slot ? c.v : "\u0000other");
+}
+function numRange(col) {
+  var lo = Infinity, hi = -Infinity;
+  S.attrs.forEach(function (o) { if (isNum(o[col])) { var x = Number(o[col]); if (x < lo) lo = x; if (x > hi) hi = x; } });
+  return [lo, hi];
+}
+function renderLegend() {
+  var box = $("#legend");
+  if (!S.colorBy) { box.innerHTML = ""; return; }
+  if (S.colorBy === "time:") {
+    box.innerHTML = '<div class="bar" style="background:linear-gradient(90deg,' + css("--seq-lo") + ',' + css("--seq-mid") + ',' + css("--seq-hi") + ')"></div>' +
+      '<div class="row muted" style="justify-content:space-between"><span>' + fmtTime(S.time.min) + '</span><span>' + fmtTime(S.time.max) + '</span></div>' +
+      '<div class="muted">古いほど淡く，新しいほど濃い．時間の無い点は灰色．</div>';
+    return;
+  }
+  if (S.colorBy.indexOf("num:") === 0) {
+    var r = numRange(S.colorBy.slice(4));
+    box.innerHTML = '<div class="bar" style="background:linear-gradient(90deg,' + css("--seq-lo") + ',' + css("--seq-mid") + ',' + css("--seq-hi") + ')"></div>' +
+      '<div class="row muted" style="justify-content:space-between"><span>' + fmt(r[0]) + '</span><span>' + fmt(r[1]) + '</span></div>' +
+      '<div class="muted">値の無い点は灰色．</div>';
+    return;
+  }
+  var html = [], other = S.cats.filter(function (c) { return !c.slot; });
+  S.cats.forEach(function (c) {
+    if (!c.slot) return;
+    html.push('<div class="item' + (S.hidden.has(c.v) ? " off" : "") + '" data-v="' + esc(c.v) + '"><span class="sw" style="background:' + catColor(c) + '"></span><span>' + esc(c.v) + '</span><span class="n">' + c.n + '</span></div>');
+  });
+  if (other.length) {
+    var n = other.reduce(function (s, c) { return s + c.n; }, 0);
+    html.push('<div class="item' + (S.hidden.has("\u0000other") ? " off" : "") + '" data-v="\u0000other" title="' + esc(other.map(function (c) { return c.v; }).join(", ")) + '"><span class="sw" style="background:' + css("--other") + '"></span><span>その他 (' + other.length + ' 種)</span><span class="n">' + n + '</span></div>');
+  }
+  if (S.timeShade && S.time.col) {
+    html.push('<div class="bar" style="background:linear-gradient(90deg,' + mixColor(css("--surface-1"), css("--text-secondary"), 0.22) + ',' + css("--text-secondary") + ')"></div>' +
+      '<div class="row muted" style="justify-content:space-between"><span>' + fmtTime(S.time.min) + '</span><span>濃淡は時間</span><span>' + fmtTime(S.time.max) + '</span></div>');
+  }
+  html.push('<div class="muted" style="margin-top:4px">クリックで表示・非表示．ダブルクリックでそれだけ．色は件数の多い ' + (MAX_CATS - (other.length ? 1 : 0)) + ' 種まで．</div>');
+  box.innerHTML = html.join("");
+  $$(".item", box).forEach(function (el) {
+    el.onclick = function () { var v = el.dataset.v; if (S.hidden.has(v)) S.hidden.delete(v); else S.hidden.add(v); renderLegend(); refreshAll(); };
+    el.ondblclick = function () {
+      var v = el.dataset.v, all = S.cats.filter(function (c) { return c.slot; }).map(function (c) { return c.v; });
+      if (other.length) all.push("\u0000other");
+      S.hidden = new Set(all.filter(function (x) { return x !== v; })); renderLegend(); refreshAll();
+    };
+  });
+}
+function lerpHex(a, b, t) {
+  var pa = [1, 3, 5].map(function (i) { return parseInt(a.substr(i, 2), 16); }), pb = [1, 3, 5].map(function (i) { return parseInt(b.substr(i, 2), 16); });
+  return "rgb(" + pa.map(function (v, i) { return Math.round(v + (pb[i] - v) * t); }).join(",") + ")";
+}
+function seqColor(t) {
+  return t < 0.5 ? lerpHex(css("--seq-lo"), css("--seq-mid"), t * 2) : lerpHex(css("--seq-mid"), css("--seq-hi"), (t - 0.5) * 2);
+}
+// 時間の濃淡: 古い (u = 0) ほど地の色に寄せて淡く，新しい (u = 1) ほど元の色
+function timeShadeColor(base, id) {
+  var tt = timeOf(id); if (tt == null) return base;
+  var u = S.time.max > S.time.min ? (tt - S.time.min) / (S.time.max - S.time.min) : 1;
+  return mixColor(css("--surface-1"), base, 0.22 + 0.78 * u);
+}
+function mixColor(a, b, t) {
+  var pa = toRGB(a), pb = toRGB(b);
+  return "rgb(" + pa.map(function (v, i) { return Math.round(v + (pb[i] - v) * t); }).join(",") + ")";
+}
+function toRGB(c) {
+  if (c[0] === "#") return [1, 3, 5].map(function (i) { return parseInt(c.substr(i, 2), 16); });
+  return (c.match(/\d+/g) || [0, 0, 0]).slice(0, 3).map(Number);
+}
+function pointColor(id) {
+  var c0 = pointColor0(id);
+  if (S.timeShade && S.time.col && S.colorBy.indexOf("cat:") === 0) return timeShadeColor(c0, id);
+  return c0;
+}
+function pointColor0(id) {
+  if (!S.colorBy) return css("--accent");
+  if (S.colorBy === "time:") {
+    var tt = timeOf(id); if (tt == null) return css("--other");
+    return seqColor(S.time.max > S.time.min ? (tt - S.time.min) / (S.time.max - S.time.min) : 0.5);
+  }
+  if (S.colorBy.indexOf("cat:") === 0) { var c = catOf(id); return c ? catColor(c) : css("--other"); }
+  var col = S.colorBy.slice(4), o = S.attrs.get(id) || {};
+  if (!isNum(o[col])) return css("--other");
+  var r = numRange(col), t = r[1] > r[0] ? (Number(o[col]) - r[0]) / (r[1] - r[0]) : 0.5;
+  return t < 0.5 ? lerpHex(css("--seq-lo"), css("--seq-mid"), t * 2) : lerpHex(css("--seq-mid"), css("--seq-hi"), (t - 0.5) * 2);
+}
+
+// ============================================================ 描画
+function coordsOf(m, id) {
+  var r = m.byId.get(id); if (!r) return null;
+  var x = Number(r[m.xcol]), y = Number(r[m.ycol]), z = m.zcol ? Number(r[m.zcol]) : null;
+  if (!isFinite(x) || !isFinite(y) || (m.zcol && !isFinite(z))) return null;
+  return [x, y, z];
+}
+function is3dMap(m) { return !!(m && (m.zcol || m.timeAxis)); }
+// 描く座標: 時間軸のときは z を時間にする (時間の無い点は描かない)
+function mapXYZ(m, id) {
+  var c = coordsOf(m, id); if (!c) return null;
+  if (m.timeAxis) { var t = timeOf(id); if (t == null) return null; return [c[0], c[1], t]; }
+  return c;
+}
+function hoverText(id) {
+  var o = S.attrs.get(id) || {}, lab = S.idLabel.get(id) || id, s = "<b>" + esc(lab) + "</b>";
+  if (lab !== id) s += "<br>" + esc(id);
+  if (S.colorBy && S.colorBy !== "time:") { var col = S.colorBy.slice(4); s += "<br>" + esc(col) + ": " + esc(fmt(o[col])); }
+  if (S.time.col && o[S.time.col]) s += "<br>" + esc(S.time.col) + ": " + esc(o[S.time.col]);
+  return s;
+}
+function paneTraces(p) {
+  var m = S.maps[p]; if (!m || !m.xcol || !m.ycol) return [];
+  var is3d = is3dMap(m), type = is3d ? "scatter3d" : "scattergl";
+  var on = { x: [], y: [], z: [], c: [], t: [], id: [] }, off = { x: [], y: [], z: [], t: [], id: [] };
+  var hasSel = S.selected.size > 0;
+  m.rows.forEach(function (r) {
+    var id = r[m.idCol], xyz = mapXYZ(m, id); if (!xyz) return;
+    var tgt = isOff(id) ? off : on;
+    tgt.x.push(xyz[0]); tgt.y.push(xyz[1]); tgt.z.push(xyz[2]); tgt.t.push(hoverText(id)); tgt.id.push(id);
+    if (tgt === on) tgt.c.push(pointColor(id));
+  });
+  var sz = is3d ? Math.max(2, S.ptSize * 0.55) : S.ptSize, ring = css("--surface-1");
+  function tr(d, extra) {
+    var t = { type: type, mode: "markers", selectedpoints: null, x: d.x, y: d.y, customdata: d.id, text: d.t, hovertemplate: "%{text}<extra></extra>" };
+    if (is3d) t.z = d.z;
+    t = Object.assign(t, extra);
+    // Plotly の投げ縄が付ける選択の見た目 (選ばなかった点を薄くする) を打ち消す．選んだ点はこちらで描く
+    var o = t.marker && t.marker.opacity != null ? t.marker.opacity : 1;
+    t.selected = { marker: { opacity: o } }; t.unselected = { marker: { opacity: o } };
+    if (t.textfont) { t.selected.textfont = { color: t.textfont.color }; t.unselected.textfont = { color: t.textfont.color }; }
+    return t;
+  }
+  var traces = [];
+  traces.push(tr(off, { name: "off", visible: !S.hideOff, marker: { size: sz * 0.7, color: css("--dim"), opacity: 0.6 }, hoverinfo: "skip", hovertemplate: null }));
+  traces.push(tr(on, { name: "on", marker: { size: sz, color: on.c, opacity: hasSel ? 0.35 : 0.9, line: { width: is3d ? 0 : 1, color: ring } } }));
+  // 選んだ点
+  var sx = { x: [], y: [], z: [], c: [], t: [], id: [], lab: [] };
+  S.selected.forEach(function (id) {
+    var xyz = mapXYZ(m, id); if (!xyz) return;
+    sx.x.push(xyz[0]); sx.y.push(xyz[1]); sx.z.push(xyz[2]); sx.c.push(pointColor(id)); sx.t.push(hoverText(id)); sx.id.push(id);
+    sx.lab.push(S.showLabels && S.selected.size <= 12 ? (S.idLabel.get(id) || id) : "");
+  });
+  traces.push(tr(sx, { name: "sel", mode: "markers+text", text: sx.lab, hovertext: sx.t, hovertemplate: "%{hovertext}<extra></extra>",
+    textposition: "top center", textfont: { size: is3d ? 12 : 11, color: css("--text-primary") },
+    marker: { size: sz * 1.5, color: sx.c, opacity: 1, line: { width: 2, color: css("--ring") } } }));
+  // フォーカス (詳細を出している点) と，他の地図でのホバーを輪で示す
+  [S.focus, S.hoverId].forEach(function (id, k) {
+    var xyz = id && mapXYZ(m, id), d = xyz ? { x: [xyz[0]], y: [xyz[1]], z: [xyz[2]], t: [""], id: [id] } : { x: [], y: [], z: [], t: [], id: [] };
+    traces.push(tr(d, { name: k ? "hover" : "focus", hoverinfo: "skip", hovertemplate: null,
+      marker: { symbol: "circle-open", size: sz * (k ? 2.6 : 3.2), color: k ? css("--accent") : css("--ring"), line: { width: k ? 2 : 3 } } }));
+  });
+  // 系譜の線 (parent → 派生)．両方が見えているときだけ
+  var T = S.time, lx = [], ly = [], lz = [];
+  // (任意の 3 次元の地図では線が入り組むので，2 次元の地図と時間軸の地図だけに描く)
+  if (T.parentCol && T.lineage && !m.zcol) {
+    m.rows.forEach(function (r) {
+      var id = r[m.idCol], par = (S.attrs.get(id) || {})[T.parentCol];
+      if (!par || !m.byId.has(par) || isOff(id) || isOff(par)) return;
+      var a = mapXYZ(m, par), b = mapXYZ(m, id); if (!a || !b) return;
+      lx.push(a[0], b[0], null); ly.push(a[1], b[1], null); lz.push(a[2], b[2], null);
+    });
+  }
+  var lin = { type: type, mode: "lines", name: "lineage", x: lx, y: ly, hoverinfo: "skip", connectgaps: false,
+    line: { color: css("--text-muted"), width: is3d ? 2 : 1 }, opacity: is3d ? 0.45 : 0.35 };
+  if (is3d) lin.z = lz;
+  traces.push(lin);
+  // 時間軸のとき: 年ごとの断面 (薄い板) と，いまの時点 t の板
+  if (m.timeAxis) {
+    var b = paneBounds(m), planes = [];
+    if (T.slices) for (var yr = Math.ceil(T.min); yr <= Math.floor(T.max); yr++) planes.push(yr);
+    traces.push(planeMesh(b, planes, css("--text-muted"), 0.05, "slices"));
+    traces.push(planeMesh(b, T.mode === "all" ? [] : [T.t], css("--accent"), 0.13, "now"));
+  }
+  return traces;
+}
+function paneBounds(m) {
+  var xs = [], ys = [];
+  m.rows.forEach(function (r) { var c = coordsOf(m, r[m.idCol]); if (c) { xs.push(c[0]); ys.push(c[1]); } });
+  var x0 = Math.min.apply(null, xs), x1 = Math.max.apply(null, xs), y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys);
+  var px = (x1 - x0) * 0.04, py = (y1 - y0) * 0.04;
+  return { x0: x0 - px, x1: x1 + px, y0: y0 - py, y1: y1 + py };
+}
+// 高さ zs の水平な板 (長方形) をまとめて 1 つの mesh3d に
+function planeMesh(b, zs, color, opacity, name) {
+  var x = [], y = [], z = [], i = [], j = [], k = [];
+  zs.forEach(function (h, n) {
+    var o = n * 4;
+    x.push(b.x0, b.x1, b.x1, b.x0); y.push(b.y0, b.y0, b.y1, b.y1); z.push(h, h, h, h);
+    i.push(o, o); j.push(o + 1, o + 2); k.push(o + 2, o + 3);
+  });
+  return { type: "mesh3d", name: name, x: x, y: y, z: z, i: i, j: j, k: k, color: color, opacity: opacity,
+    hoverinfo: "skip", showscale: false, flatshading: true, lighting: { ambient: 1, diffuse: 0, specular: 0, fresnel: 0 } };
+}
+function paneLayout(p) {
+  var m = S.maps[p], is3d = is3dMap(m);
+  var ax = function (title) {
+    return { title: { text: title, font: { size: 11, color: css("--text-muted") } }, gridcolor: css("--grid"), zerolinecolor: css("--grid"),
+      linecolor: css("--line"), tickfont: { size: 10, color: css("--text-muted") }, showspikes: false };
+  };
+  var L = {
+    paper_bgcolor: css("--surface-1"), plot_bgcolor: css("--surface-1"), font: { color: css("--text-primary"), size: 12 },
+    margin: { l: 40, r: 10, t: 10, b: 36 }, showlegend: false, hovermode: "closest", dragmode: is3d ? "orbit" : "pan",
+    selections: [],
+    uirevision: p + ":" + (m ? m.name + m.xcol + m.ycol + m.zcol + (m.timeAxis ? ":t" : "") : ""),
+    hoverlabel: { bgcolor: css("--surface-1"), bordercolor: css("--line"), font: { color: css("--text-primary") } },
+  };
+  if (is3d && m.timeAxis) {
+    // x と y は地図の縮尺のまま，時間の軸は見やすい長さに (aspectratio)
+    var b = paneBounds(m), wx = b.x1 - b.x0, wy = b.y1 - b.y0, s = Math.max(wx, wy);
+    var T = S.time, tv = [], tt = [];
+    for (var yr = Math.ceil(T.min); yr <= Math.floor(T.max); yr++) { tv.push(yr); tt.push(T.isDate ? String(yr) : fmt(yr)); }
+    var za = ax("時間 (" + T.col + ")");
+    if (T.isDate) { za.tickvals = tv; za.ticktext = tt; }
+    L.scene = { xaxis: ax(m.xcol), yaxis: ax(m.ycol), zaxis: za, bgcolor: css("--surface-1"),
+      aspectmode: "manual", aspectratio: { x: wx / s, y: wy / s, z: 1.3 }, camera: CAMS.iso };
+  } else if (is3d) L.scene = { xaxis: ax(m.xcol), yaxis: ax(m.ycol), zaxis: ax(m.zcol), bgcolor: css("--surface-1"), aspectmode: "data" };
+  else if (m) { L.xaxis = ax(m.xcol); L.yaxis = Object.assign(ax(m.ycol), { scaleanchor: "x", scaleratio: 1 }); }
+  return L;
+}
+// 視点: 上 = 時間の軸に沿って見下ろす (元の 2 次元の地図)，横 = 時間が縦，斜 = その間
+var CAMS = {
+  top: { eye: { x: 0, y: 0, z: 2.3 }, up: { x: 0, y: 1, z: 0 }, center: { x: 0, y: 0, z: 0 }, projection: { type: "orthographic" } },
+  side: { eye: { x: 0, y: -2.4, z: 0.05 }, up: { x: 0, y: 0, z: 1 }, center: { x: 0, y: 0, z: 0 }, projection: { type: "orthographic" } },
+  iso: { eye: { x: 1.55, y: -1.55, z: 0.75 }, up: { x: 0, y: 0, z: 1 }, center: { x: 0, y: 0, z: 0 }, projection: { type: "perspective" } },
+};
+// カメラは要素ごとに渡す (camera をまとめて置き換えると投影の切り替えで描画が崩れることがある)
+function setCam(el, name) {
+  var c = CAMS[name];
+  Plotly.relayout(el, { "scene.camera.eye": c.eye, "scene.camera.up": c.up, "scene.camera.center": c.center, "scene.camera.projection.type": c.projection.type });
+}
+var CONFIG = { responsive: true, displaylogo: false, scrollZoom: true, modeBarButtonsToRemove: ["toImage", "autoScale2d", "resetScale2d", "hoverClosestCartesian", "hoverCompareCartesian", "toggleSpikelines", "resetCameraLastSave3d", "hoverClosest3d"] };
+
+function renderPane(p) {
+  var pane = $('.pane[data-p="' + p + '"]'), el = $(".plot", pane), m = S.maps[p];
+  pane.classList.toggle("empty", !m);
+  if (!m) { Plotly.purge(el); return; }
+  S.rendering = true;
+  try { Plotly.react(el, paneTraces(p), paneLayout(p), CONFIG); } finally { S.rendering = false; }
+  if (!el._atlasBound) bindPlot(p, el);
+}
+function refreshAll(fit) {
+  PANES.forEach(renderPane);
+  renderSelection(); renderCard(); renderCompare();
+}
+function bindPlot(p, el) {
+  el._atlasBound = true;
+  el.on("plotly_click", function (ev) {
+    // 3D の地図は描き直しの途中にクリックの出来事を出し直すことがある．描き直しの中では受けない (受けると無限に描き直す)
+    if (S.rendering) return;
+    var pt = ev.points && ev.points[0]; if (!pt || pt.customdata == null) return;
+    var id = pt.customdata, add = ev.event && (ev.event.shiftKey || ev.event.metaKey || ev.event.ctrlKey);
+    if (!add && S.focus === id && S.selected.size === 1 && S.selected.has(id)) return;
+    if (add) { if (S.selected.has(id)) S.selected.delete(id); else S.selected.add(id); }
+    else S.selected = new Set([id]);
+    S.focus = id;
+    // 3D はクリックを自分の描画の途中で出すので，描き直しはその後に回す
+    setTimeout(function () { refreshAll(); }, 0);
+  });
+  el.on("plotly_selected", function (ev) {
+    // 描き直しのときに Plotly が出す空の選択は無視する (解除は「解除」か Esc)
+    if (S.rendering || !ev || !ev.points || !ev.points.length) return;
+    var ids = ev.points.filter(function (pt) { return pt.data.name === "on" || pt.data.name === "sel"; }).map(function (pt) { return pt.customdata; });
+    S.selected = new Set(ids); S.focus = null; refreshAll();
+    toast(S.selected.size + " 点を選んだ");
+  });
+  el.on("plotly_deselect", function () { });
+  el.on("plotly_hover", function (ev) {
+    if (S.rendering) return;
+    var pt = ev.points && ev.points[0]; if (!pt || pt.customdata == null) return;
+    var hid = pt.customdata; setTimeout(function () { setHover(p, hid); }, 0);
+  });
+  el.on("plotly_unhover", function () { if (!S.rendering) setTimeout(function () { setHover(p, null); }, 0); });
+}
+// ホバーした点を，もう一方の地図に輪で示す (その地図だけ描き直す)
+function setHover(src, id) {
+  if (S.hoverId === id) return;
+  S.hoverId = id;
+  PANES.forEach(function (p) {
+    if (p === src || !S.maps[p]) return;
+    var el = $('.pane[data-p="' + p + '"] .plot'), m = S.maps[p], xyz = id && mapXYZ(m, id);
+    var upd = { x: [xyz ? [xyz[0]] : []], y: [xyz ? [xyz[1]] : []] };
+    if (is3dMap(m)) upd.z = [xyz ? [xyz[2]] : []];
+    S.rendering = true;
+    try { Plotly.restyle(el, upd, [4]); } finally { S.rendering = false; }
+  });
+}
+
+// ============================================================ 寄る・全体
+function fitPane(p) {
+  var el = $('.pane[data-p="' + p + '"] .plot'), m = S.maps[p]; if (!m) return;
+  if (m.timeAxis) setCam(el, "iso");
+  else if (m.zcol) Plotly.relayout(el, { "scene.camera": { eye: { x: 1.25, y: 1.25, z: 1.25 }, center: { x: 0, y: 0, z: 0 } } });
+  else Plotly.relayout(el, { "xaxis.autorange": true, "yaxis.autorange": true });
+}
+function flyTo(id) {
+  PANES.forEach(function (p) {
+    var m = S.maps[p], xyz = m && coordsOf(m, id); if (!xyz || is3dMap(m)) return;
+    var el = $('.pane[data-p="' + p + '"] .plot');
+    var xs = m.rows.map(function (r) { return Number(r[m.xcol]); }).filter(isFinite);
+    var ys = m.rows.map(function (r) { return Number(r[m.ycol]); }).filter(isFinite);
+    var w = (Math.max.apply(null, xs) - Math.min.apply(null, xs)) * 0.18, h = (Math.max.apply(null, ys) - Math.min.apply(null, ys)) * 0.18;
+    var s = Math.max(w, h);
+    Plotly.relayout(el, { "xaxis.range": [xyz[0] - s, xyz[0] + s], "yaxis.range": [xyz[1] - s, xyz[1] + s] });
+  });
+}
+function choose(id, fly) {
+  if (!S.attrs.has(id)) { toast("見つかりません: " + id); return; }
+  S.selected = new Set([id]); S.focus = id; refreshAll(); if (fly) flyTo(id);
+}
+
+// ============================================================ 近傍
+function knn(m, id, k) {
+  var c = coordsOf(m, id); if (!c) return null;
+  var d = [];
+  m.rows.forEach(function (r) {
+    var j = r[m.idCol]; if (j === id) return; var q = coordsOf(m, j); if (!q) return;
+    var s = (q[0] - c[0]) * (q[0] - c[0]) + (q[1] - c[1]) * (q[1] - c[1]) + (m.zcol ? (q[2] - c[2]) * (q[2] - c[2]) : 0);
+    d.push([s, j]);
+  });
+  d.sort(function (a, b) { return a[0] - b[0]; });
+  return d.slice(0, k).map(function (e) { return e[1]; });
+}
+// A と B の両方にある点について，k 近傍の重なり (共通の割合) の平均．地図どうしがどれだけ局所の関係を共有しているか
+function computeKnnScore() {
+  S.knnScore = null;
+  var a = S.maps.a, b = S.maps.b; if (!a || !b) return;
+  var common = a.rows.map(function (r) { return r[a.idCol]; }).filter(function (id) { return coordsOf(a, id) && coordsOf(b, id); });
+  if (common.length < 12 || common.length > 4000) return;
+  var k = 10, set = new Set(common);
+  function nb(m, id) {
+    var c = coordsOf(m, id), d = [];
+    common.forEach(function (j) { if (j === id) return; var q = coordsOf(m, j); d.push([(q[0] - c[0]) * (q[0] - c[0]) + (q[1] - c[1]) * (q[1] - c[1]) + (m.zcol ? (q[2] - c[2]) * (q[2] - c[2]) : 0), j]); });
+    d.sort(function (x, y) { return x[0] - y[0]; });
+    return d.slice(0, k).map(function (e) { return e[1]; });
+  }
+  var tot = 0;
+  common.forEach(function (id) { var na = new Set(nb(a, id)); tot += nb(b, id).filter(function (j) { return na.has(j); }).length / k; });
+  S.knnScore = { k: k, n: common.length, v: tot / common.length, onlyA: a.rows.length - common.length, onlyB: b.rows.length - common.length };
+}
+function renderCompare() {
+  var s = S.knnScore, el = $("#compare");
+  if (!S.maps.a || !S.maps.b || S.layout === 1) { el.textContent = ""; return; }
+  if (!s) { el.textContent = ""; return; }
+  el.innerHTML = "A と B の " + s.k + " 近傍の一致 " + (100 * s.v).toFixed(0) + "% (共通 " + s.n + " 点" +
+    (s.onlyA || s.onlyB ? "，A のみ " + s.onlyA + "，B のみ " + s.onlyB : "") + ")";
+}
+
+// ============================================================ 選んだ点・詳細
+function renderSelection() {
+  var box = $("#selbox"), ids = Array.from(S.selected);
+  if (!ids.length) { box.className = "muted"; box.innerHTML = "点をクリック (Shift で追加)，または 2D の地図で投げ縄・矩形で囲む．"; return; }
+  box.className = "";
+  var html = ['<div class="row"><b>' + ids.length + ' 点</b><span class="grow"></span><button id="selClear">解除</button><button id="selCsv">CSV</button></div>'];
+  if (S.colorBy.indexOf("cat:") === 0 && ids.length > 1) {
+    var cnt = new Map(); ids.forEach(function (id) { var c = catOf(id); var k = c ? (c.slot ? c.v : "その他") : "(空)"; cnt.set(k, (cnt.get(k) || 0) + 1); });
+    html.push('<div class="muted" style="margin:4px 0">' + Array.from(cnt.entries()).sort(function (p, q) { return q[1] - p[1]; }).map(function (e) { return esc(e[0]) + " " + e[1]; }).join("，") + '</div>');
+  }
+  var numCols = S.attrCols.filter(function (h) { return S.attrNumeric[h]; });
+  if (numCols.length && ids.length > 1) {
+    html.push('<table class="muted" style="font-size:12px;margin:2px 0 6px"><tr><td></td><td>選んだ点</td><td>全体</td></tr>');
+    numCols.forEach(function (h) {
+      var mean = function (list) { var v = list.map(function (id) { return (S.attrs.get(id) || {})[h]; }).filter(isNum).map(Number); return v.length ? v.reduce(function (s, x) { return s + x; }, 0) / v.length : NaN; };
+      html.push("<tr><td>" + esc(h) + "</td><td>" + fmt(mean(ids)) + "</td><td>" + fmt(mean(Array.from(S.attrs.keys()))) + "</td></tr>");
+    });
+    html.push("</table>");
+  }
+  html.push('<div id="sellist">' + ids.slice(0, 200).map(function (id) {
+    return '<div data-id="' + esc(id) + '"><span class="sw" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + pointColor(id) + '"></span> ' + esc(S.idLabel.get(id) || id) + '</div>';
+  }).join("") + (ids.length > 200 ? '<div class="muted">… ほか ' + (ids.length - 200) + '</div>' : "") + '</div>');
+  box.innerHTML = html.join("");
+  $("#selClear").onclick = function () { S.selected = new Set(); S.focus = null; refreshAll(); };
+  $("#selCsv").onclick = function () { downloadSelection(ids); };
+  $$("#sellist div[data-id]").forEach(function (el) { el.onclick = function () { S.focus = el.dataset.id; refreshAll(); flyTo(el.dataset.id); }; });
+}
+function downloadSelection(ids) {
+  var cols = ["id"].concat(S.attrCols);
+  var q = function (v) { v = v == null ? "" : String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+  var lines = [cols.join(",")].concat(ids.map(function (id) { var o = S.attrs.get(id) || {}; return [q(id)].concat(S.attrCols.map(function (h) { return q(o[h]); })).join(","); }));
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([lines.join("\n") + "\n"], { type: "text/csv" }));
+  a.download = "selection.csv"; a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+}
+function linkOf(id) {
+  var o = S.attrs.get(id) || {}, u = findCol(S.attrCols, URL_NAMES), h = findCol(S.attrCols, HF_NAMES);
+  if (u && /^https?:\/\//.test(o[u] || "")) return o[u];
+  if (h && o[h]) return "https://huggingface.co/" + o[h];
+  if (h === null && findCol([S.maps.a && S.maps.a.idCol, S.maps.b && S.maps.b.idCol].filter(Boolean), HF_NAMES)) return "https://huggingface.co/" + id;
+  return null;
+}
+function renderCard() {
+  var box = $("#cardbox"), id = S.focus;
+  if (!id || !S.attrs.has(id)) { box.className = "muted"; box.innerHTML = "点をクリックすると表示．"; return; }
+  box.className = "card";
+  var o = S.attrs.get(id), lab = S.idLabel.get(id) || id, url = linkOf(id);
+  var html = ['<div class="title">' + esc(lab) + '</div>'];
+  if (lab !== id) html.push('<div class="muted">' + esc(id) + '</div>');
+  html.push("<table>");
+  var pc = S.time.parentCol;
+  S.attrCols.forEach(function (h) {
+    if (h === S.labelCol) return;
+    var v = (h === pc && o[h] && S.attrs.has(o[h])) ? '<span class="link" data-go="' + esc(o[h]) + '">' + esc(S.idLabel.get(o[h]) || o[h]) + '</span>' : esc(fmt(o[h]));
+    html.push("<tr><td>" + esc(h) + "</td><td>" + v + "</td></tr>");
+  });
+  if (pc) {
+    var kids = []; S.attrs.forEach(function (q, j) { if (q[pc] === id) kids.push(j); });
+    kids.sort(function (a, b) { return (timeOf(a) || 0) - (timeOf(b) || 0); });
+    if (kids.length) html.push("<tr><td>派生 (" + kids.length + ")</td><td>" + kids.map(function (j) { return '<span class="link" data-go="' + esc(j) + '">' + esc(S.idLabel.get(j) || j) + '</span>'; }).join("，") + "</td></tr>");
+  }
+  PANES.forEach(function (p) {
+    var m = S.maps[p]; if (!m) return; var c = coordsOf(m, id);
+    html.push("<tr><td>" + p.toUpperCase() + " の座標</td><td>" + (c ? c.filter(function (v) { return v != null; }).map(fmt).join(", ") : "なし") + "</td></tr>");
+  });
+  html.push("</table>");
+  if (url) html.push('<div style="margin-top:4px"><a class="link" href="' + esc(url) + '" target="_blank" rel="noopener">' + esc(url.replace(/^https?:\/\//, "")) + '</a></div>');
+  // 近傍: A と B のそれぞれで近い 8 点．両方に入る点を太字に
+  var k = 8, na = S.maps.a && knn(S.maps.a, id, k), nbb = S.maps.b && S.layout === 2 && knn(S.maps.b, id, k);
+  if (na || nbb) {
+    var setA = new Set(na || []), setB = new Set(nbb || []);
+    var col = function (list, other) {
+      return list ? list.map(function (j) { return '<div data-id="' + esc(j) + '" class="' + (other.has(j) ? "both" : "") + '">' + esc(S.idLabel.get(j) || j) + '</div>'; }).join("") : '<div class="muted">なし</div>';
+    };
+    html.push('<div class="muted" style="margin-top:8px">近い ' + k + ' 点 (地図の上の距離．太字は A と B の両方)</div>');
+    html.push('<div class="row" style="align-items:flex-start;gap:10px"><div style="flex:1;min-width:0"><div class="muted">A</div><div class="nb" style="columns:1">' + col(na, setB) + '</div></div>' +
+      (nbb ? '<div style="flex:1;min-width:0"><div class="muted">B</div><div class="nb" style="columns:1">' + col(nbb, setA) + '</div></div>' : "") + '</div>');
+  }
+  box.innerHTML = html.join("");
+  $$(".nb div[data-id]", box).forEach(function (el) { el.onclick = function () { choose(el.dataset.id, true); }; });
+  $$("[data-go]", box).forEach(function (el) { el.onclick = function () { choose(el.dataset.go, true); }; });
+}
+
+// ============================================================ 枠の操作
+function setupPaneBar(p) {
+  var pane = $('.pane[data-p="' + p + '"]'), m = S.maps[p];
+  $(".name", pane).textContent = p.toUpperCase() + (m && !m.setId ? ": " + m.name : "");
+  $(".name", pane).title = m ? m.name : "";
+  if (!m) return;
+  var nums = m.header.filter(function (h) { return m.numeric[h] && h !== m.idCol; });
+  var opt = function (sel, v, none) {
+    sel.innerHTML = (none ? '<option value="">なし</option>' : "") + nums.map(function (h) { return '<option value="' + esc(h) + '">' + esc(h) + '</option>'; }).join("");
+    sel.value = v || "";
+  };
+  opt($(".cx", pane), m.xcol); opt($(".cy", pane), m.ycol); opt($(".cz", pane), m.zcol, true);
+  syncTimeAxisUI(p);
+}
+function syncTimeAxisUI(p) {
+  var pane = $('.pane[data-p="' + p + '"]'), m = S.maps[p], ok = !!(m && S.time.col);
+  if (m && m.timeAxis && !ok) { m.timeAxis = false; m.zcol = m.zSaved || ""; }
+  var cb = $(".ct", pane); cb.disabled = !ok; cb.checked = !!(m && m.timeAxis);
+  $(".tl", pane).classList.toggle("off", !ok);
+  $(".cz", pane).disabled = !!(m && m.timeAxis);
+  $(".cams", pane).hidden = !(m && m.timeAxis);
+}
+function setTimeAxis(p, on) {
+  var m = S.maps[p]; if (!m) return;
+  if (on && !m.timeAxis) { m.zSaved = m.zcol; m.zcol = ""; m.timeAxis = true; }
+  else if (!on && m.timeAxis) { m.timeAxis = false; m.zcol = m.zSaved || ""; }
+  setupPaneBar(p); rebuildAttrs(); refreshAll();
+}
+function bindPane(p) {
+  var pane = $('.pane[data-p="' + p + '"]'), file = $("input[type=file]", pane);
+  $(".open", pane).onclick = function () { file.click(); };
+  file.onchange = function () { if (file.files[0]) readFile(p, file.files[0]); file.value = ""; };
+  $(".fit", pane).onclick = function () { fitPane(p); };
+  $(".ct", pane).onchange = function (ev) { setTimeAxis(p, ev.target.checked); };
+  $$(".cams button", pane).forEach(function (b) {
+    b.onclick = function () { setCam($(".plot", pane), b.dataset.cam); };
+  });
+  [["cx", "xcol"], ["cy", "ycol"], ["cz", "zcol"]].forEach(function (e) {
+    $("." + e[0], pane).onchange = function (ev) { var m = S.maps[p]; if (!m) return; m[e[1]] = ev.target.value; rebuildAttrs(); refreshAll(); };
+  });
+  pane.addEventListener("dragover", function (ev) { ev.preventDefault(); pane.classList.add("dragover"); });
+  pane.addEventListener("dragleave", function (ev) { if (!pane.contains(ev.relatedTarget)) pane.classList.remove("dragover"); });
+  pane.addEventListener("drop", function (ev) {
+    ev.preventDefault(); pane.classList.remove("dragover");
+    var f = ev.dataTransfer.files; if (!f.length) return;
+    readFile(p, f[0]);
+    if (f.length > 1 && p === "a") readFile("b", f[1]);   // 2 つまとめて落とすと A と B に
+  });
+}
+function readFile(p, f) { var r = new FileReader(); r.onload = function () { loadMap(p, f.name, r.result); }; r.readAsText(f); }
+function setLayout(n) {
+  S.layout = n; $("#panes").classList.toggle("single", n === 1);
+  $("#lay1").classList.toggle("on", n === 1); $("#lay2").classList.toggle("on", n === 2);
+  setTimeout(function () { PANES.forEach(function (p) { var el = $('.pane[data-p="' + p + '"] .plot'); if (S.maps[p]) Plotly.Plots.resize(el); }); renderCard(); renderCompare(); }, 30);
+}
+
+// ============================================================ 時間の操作 (左の欄)
+function renderTimeBox() {
+  var box = $("#timebox"), T = S.time;
+  PANES.forEach(syncTimeAxisUI);
+  if (!T.col) { stopPlay(); box.className = "muted"; box.innerHTML = "時間の列 (release_date，date，year など) があると使える．"; return; }
+  box.className = "";
+  var n = 0, all = 0;
+  S.attrs.forEach(function (o, id) { if (timeOf(id) != null) { all++; if (!timeOff(id)) n++; } });
+  var seg = function (v, l, tip) { return '<button data-mode="' + v + '" class="' + (T.mode === v ? "on" : "") + '" title="' + tip + '">' + l + '</button>'; };
+  box.innerHTML =
+    '<div class="row"><span class="muted">列</span> <b>' + esc(T.col) + '</b><span class="muted">(' + fmtTime(T.min) + ' – ' + fmtTime(T.max) + ')</span></div>' +
+    '<div class="row" style="margin-top:4px"><span class="seg">' + seg("all", "すべて", "時間で絞らない") + seg("cum", "t まで", "時点 t までに出たものだけ (地図が埋まっていく様子)") +
+      seg("win", "直近", "時点 t の前の一定期間に出たものだけ (前線の動き)") + '</span>' +
+      '<button id="tPlay" title="時間を進める">' + (T.timer ? "⏸" : "▶") + '</button></div>' +
+    '<input type="range" id="tSlider" min="' + T.min + '" max="' + T.max + '" step="' + (T.isDate ? 1 / 12 : (T.max - T.min) / 100) + '" value="' + T.t + '">' +
+    '<div class="row muted" style="justify-content:space-between"><span>t = <span class="now">' + fmtTime(T.t) + '</span></span><span class="cnt">' + (T.mode === "all" ? all : n) + ' / ' + all + ' 点</span></div>' +
+    (T.mode === "win" ? '<div class="row muted">直近 <input type="number" id="tWin" min="1" max="120" value="' + Math.round(T.win * 12) + '" style="width:56px"> か月</div>' : "") +
+    '<div class="row" style="margin-top:4px">' +
+      '<label class="muted"><input type="checkbox" id="tColor"' + (S.timeShade || S.colorBy === "time:" ? " checked" : "") + '> 時間で色分け</label>' +
+      ((S.timeShade || S.colorBy === "time:") ? '<label class="muted" title="系列 (色分けの区分) の色を残し，時間を濃淡で表す"><input type="checkbox" id="tKeep"' + (S.timeKeep ? " checked" : "") + '> 系列の色を残す</label>' : "") +
+      (T.parentCol ? '<label class="muted"><input type="checkbox" id="tLin"' + (T.lineage ? " checked" : "") + '> 系譜の線 (' + esc(T.parentCol) + ')</label>' : "") +
+      '<label class="muted"><input type="checkbox" id="tSlice"' + (T.slices ? " checked" : "") + '> 年の断面</label></div>' +
+    '<div class="muted" style="margin-top:2px">各地図の「時間軸」で時間を縦の軸にする．「上」で元の地図，「横」で時間の流れ．</div>';
+  $$("#timebox [data-mode]").forEach(function (b) {
+    b.onclick = function () { T.mode = b.dataset.mode; if (T.mode !== "all" && T.t >= T.max && !T.timer) T.t = T.max; refreshTime(); };
+  });
+  $("#tSlider").oninput = function (ev) { T.t = Number(ev.target.value); if (T.mode === "all") T.mode = "cum"; stopPlay(); scheduleTime(); };
+  $("#tPlay").onclick = function () { if (T.timer) stopPlay(); else startPlay(); renderTimeBox(); };
+  if ($("#tWin")) $("#tWin").onchange = function (ev) { T.win = Math.max(1, Number(ev.target.value) || 12) / 12; refreshTime(); };
+  if ($("#tLin")) $("#tLin").onchange = function (ev) { T.lineage = ev.target.checked; refreshAll(); };
+  $("#tSlice").onchange = function (ev) { T.slices = ev.target.checked; refreshAll(); };
+  // 時間で色分け: 「系列の色を残す」なら区分の色のまま古いほど淡く，残さないなら色分けを「時間」(青の濃淡) に．外すと前の色分けに戻す
+  $("#tColor").onchange = function (ev) { applyTimeColor(ev.target.checked, S.timeKeep); };
+  if ($("#tKeep")) $("#tKeep").onchange = function (ev) { S.timeKeep = ev.target.checked; applyTimeColor(true, S.timeKeep); };
+}
+function prevCatColorBy() {
+  var vals = $$("#colorBy option").map(function (o) { return o.value; });
+  return (S.prevColorBy && S.prevColorBy !== "time:" && vals.indexOf(S.prevColorBy) >= 0) ? S.prevColorBy
+    : (vals.find(function (x) { return x.indexOf("cat:") === 0; }) || "");
+}
+function applyTimeColor(on, keep) {
+  var v = S.colorBy;
+  if (S.colorBy !== "time:") S.prevColorBy = S.colorBy;
+  if (!on) { S.timeShade = false; if (v === "time:") v = prevCatColorBy(); }
+  else if (keep) { S.timeShade = true; if (v === "time:" || v.indexOf("cat:") !== 0) v = prevCatColorBy(); }
+  else { S.timeShade = false; v = "time:"; }
+  S.colorTouched = true; $("#colorBy").value = v;
+  setColorBy(v, true);   // 凡例も作り直す
+  renderTimeBox(); refreshAll();
+}
+function refreshTime() { renderTimeBox(); refreshAll(); }
+// 再生中・スライダー操作中は欄を作り直さず，値だけ書き換える (ボタンが押せなくならないように)
+function refreshTimeLive() {
+  var T = S.time, sl = $("#tSlider");
+  if (!sl) return refreshTime();
+  sl.value = T.t; $("#timebox .now").textContent = fmtTime(T.t);
+  var n = 0, all = 0; S.attrs.forEach(function (o, id) { if (timeOf(id) != null) { all++; if (!timeOff(id)) n++; } });
+  $("#timebox .cnt").textContent = (T.mode === "all" ? all : n) + " / " + all + " 点";
+  $$("#timebox [data-mode]").forEach(function (b) { b.classList.toggle("on", b.dataset.mode === T.mode); });
+  refreshAll();
+}
+// スライダーを動かしている間は描き直しを 1 フレームに 1 回に
+function scheduleTime() {
+  if (scheduleTime.raf) return;
+  scheduleTime.raf = requestAnimationFrame(function () { scheduleTime.raf = 0; refreshTimeLive(); });
+}
+function startPlay() {
+  var T = S.time; if (!T.col) return;
+  if (T.mode === "all") T.mode = "cum";
+  if (T.t >= T.max - 1e-9) T.t = T.min;
+  refreshTime();
+  var step = T.isDate ? 1 / 12 : (T.max - T.min) / 60;
+  T.timer = setInterval(function () {
+    T.t = Math.min(T.max, T.t + step);
+    refreshTimeLive();
+    if (T.t >= T.max - 1e-9) { stopPlay(); renderTimeBox(); }
+  }, 160);
+}
+function stopPlay() { if (S.time.timer) { clearInterval(S.time.timer); S.time.timer = null; } }
+
+// ============================================================ 初期化
+function init() {
+  PANES.forEach(bindPane);
+  $("#lay1").onclick = function () { setLayout(1); };
+  $("#lay2").onclick = function () { setLayout(2); };
+  $("#colorBy").onchange = function (ev) {
+    S.colorTouched = true; if (S.colorBy !== "time:") S.prevColorBy = S.colorBy;
+    if (ev.target.value === "time:") { S.timeShade = false; S.timeKeep = false; }
+    else if (!S.timeShade) S.timeKeep = true;   // 既定 (系列の色を残す) に戻す
+    setColorBy(ev.target.value); renderTimeBox();
+  };
+  $("#hideOff").onchange = function (ev) { S.hideOff = ev.target.checked; refreshAll(); };
+  $("#ptSize").onchange = function (ev) { S.ptSize = Math.max(3, Math.min(20, Number(ev.target.value) || 8)); refreshAll(); };
+  $("#showLabels").onchange = function (ev) { S.showLabels = ev.target.checked; refreshAll(); };
+  $("#search").addEventListener("keydown", function (ev) {
+    if (ev.key !== "Enter") return;
+    var q = ev.target.value.trim(); if (!q) return;
+    if (S.attrs.has(q)) return choose(q, true);
+    var ql = q.toLowerCase(), hit = Array.from(S.idLabel.entries()).filter(function (e) { return e[0].toLowerCase().indexOf(ql) >= 0 || String(e[1]).toLowerCase().indexOf(ql) >= 0; });
+    if (!hit.length) return toast("見つかりません: " + q);
+    if (hit.length === 1) return choose(hit[0][0], true);
+    S.selected = new Set(hit.map(function (e) { return e[0]; })); S.focus = null; refreshAll(); toast(hit.length + " 点が一致");
+  });
+  $("#sampleBtn").onclick = function () {
+    if (!window.ATLAS_SAMPLE) { toast("sample/sample.js が見つかりません"); return; }
+    loadMap("a", "sample-a.csv", window.ATLAS_SAMPLE["sample-a.csv"]);
+    loadMap("b", "sample-b.csv", window.ATLAS_SAMPLE["sample-b.csv"]);
+  };
+  $("#themeBtn").onclick = function () {
+    var dark = getComputedStyle(document.documentElement).colorScheme === "dark";
+    document.documentElement.dataset.theme = dark ? "light" : "dark";
+    renderLegend(); refreshAll();
+  };
+  if (window.matchMedia) window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function () { renderLegend(); refreshAll(); });
+  document.addEventListener("keydown", function (ev) {
+    if (ev.key === "Escape" && document.activeElement.tagName !== "INPUT") { S.selected = new Set(); S.focus = null; refreshAll(); }
+  });
+  // ?a=…&b=… で CSV を読む (http で配るとき)．?sample でサンプル
+  var qs = new URLSearchParams(location.search);
+  // ?set=… のとき: 組の中の地図を選ぶ (?a=条件&b=条件)．ファイルでも開ける
+  if (window.ATLAS_SET) {
+    var ST = window.ATLAS_SET, ids = Object.keys(ST.maps);
+    PANES.forEach(function (p, k) {
+      var pane = $('.pane[data-p="' + p + '"]'), sel = $(".cond", pane);
+      sel.innerHTML = ids.map(function (id) { return '<option value="' + esc(id) + '">' + esc(ST.maps[id].label) + '</option>'; }).join("");
+      sel.hidden = false; $(".open", pane).hidden = true;
+      sel.onchange = function () { loadSetMap(p, sel.value); };
+      var id = qs.get(p); if (!ST.maps[id]) id = (ST.default || ids)[k] || ids[0];
+      loadSetMap(p, id);
+    });
+  }
+  else PANES.forEach(function (p) {
+    var u = qs.get(p); if (!u) return;
+    fetch(u).then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); })
+      .then(function (t) { loadMap(p, u.split("/").pop(), t); })
+      .catch(function (e) { toast(u + " を読めません (" + e.message + ")"); });
+  });
+  if (qs.has("sample")) $("#sampleBtn").click();
+  if (qs.get("layout") === "1") setLayout(1);
+  PANES.forEach(function (p) { setupPaneBar(p); });
+}
+init();
+// 組の段 (ATLAS_SET.steps) をスライドの頁送りで進める (?embed．embed.js)．各段は {cap, a, b, sel} で状態をまるごと決める
+if (window.ATLAS_SET && window.ATLAS_SET.steps && window.ATLAS_SET.steps.length) {
+  var ATLAS_K = 0;
+  var atlasApply = function (k) {
+    var s = window.ATLAS_SET.steps[k]; ATLAS_K = k;
+    PANES.forEach(function (p) { var id = s[p]; if (id && (!S.maps[p] || S.maps[p].setId !== id)) loadSetMap(p, id); });
+    if (s.sel) choose(s.sel); else { S.selected = new Set(); S.focus = null; refreshAll(); }
+    if (window.embedCaption) window.embedCaption(s.cap);
+  };
+  window.demoSteps = {
+    next: function () { if (ATLAS_K >= window.ATLAS_SET.steps.length - 1) return false; atlasApply(ATLAS_K + 1); return true; },
+    prev: function () { if (ATLAS_K <= 0) return false; atlasApply(ATLAS_K - 1); return true; },
+    start: function () { atlasApply(0); }, end: function () { atlasApply(window.ATLAS_SET.steps.length - 1); }
+  };
+}
+</script>
+<script>window.XP_SRC = [['#selbox', '選んだ点'], ['#cardbox', '点の詳細'], ['#timebox', '時間']];</script>
+<style>
+#xpBtn { font: inherit; color: var(--text-primary); background: var(--surface-1); border: 1px solid var(--line); border-radius: 6px; padding: 3px 10px; cursor: pointer; }
+.xp-src { cursor: zoom-in; }
+#xpOv { position: fixed; inset: 0; z-index: 9999; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,.45); }
+#xpOv.show { display: flex; }
+#xpBox { background: var(--surface-1); color: var(--text-primary); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,.35);
+  width: min(92vw, 1100px); max-height: 88vh; overflow: auto; padding: 18px 26px 22px; position: relative; }
+#xpBox .xp-body { zoom: 1.7; line-height: 1.6; }
+#xpBox .xp-sec + .xp-sec { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--line); }
+#xpBox .xp-h { font-size: 11px; color: var(--text-muted); margin-bottom: 2px; }
+#xpBox .xp-close { position: absolute; top: 8px; right: 12px; font-size: 20px; line-height: 1; border: 0; background: none; color: var(--text-muted); cursor: pointer; }
+#xpBox .xp-hint { margin-top: 12px; font-size: 12px; color: var(--text-muted); }
+</style>
+<div id="xpOv"><div id="xpBox"><button class="xp-close" title="閉じる (Esc)">×</button><div class="xp-body" id="xpBody"></div>
+<div class="xp-hint">説明を大きく表示 (i または Esc で閉じる．← → の操作はそのまま効く)</div></div></div>
+<script>/* 説明の拡大表示: XP_SRC に並べた要素の中身を大きな窓に写す */
+(function () {
+  var SRC = window.XP_SRC || [], ov = document.getElementById('xpOv'), body = document.getElementById('xpBody'), obs = null;
+  function els() { var out = []; SRC.forEach(function (s) { document.querySelectorAll(s[0]).forEach(function (e) { out.push([e, s[1]]); }); }); return out; }
+  function visible(e) { return e.offsetParent !== null && e.textContent.trim() !== ''; }
+  function fill() {
+    body.innerHTML = '';
+    els().forEach(function (p) { if (!visible(p[0])) return;
+      var sec = document.createElement('div'); sec.className = 'xp-sec';
+      if (p[1]) { var h = document.createElement('div'); h.className = 'xp-h'; h.textContent = p[1]; sec.append(h); }
+      var c = p[0].cloneNode(true); c.removeAttribute('id'); c.querySelectorAll('[id]').forEach(function (x) { x.removeAttribute('id'); });
+      c.querySelectorAll('input,select,button,textarea').forEach(function (x) { x.remove(); });
+      c.classList.remove('xp-src'); c.style.maxHeight = 'none'; c.style.overflow = 'visible'; c.style.border = '0'; c.style.cursor = 'auto';
+      sec.append(c); body.append(sec); });
+    if (!body.children.length) body.textContent = '(この場面の説明はありません)';
+  }
+  function open() { fill(); ov.classList.add('show');
+    obs = new MutationObserver(function () { clearTimeout(obs.t); obs.t = setTimeout(fill, 60); });
+    els().forEach(function (p) { obs.observe(p[0], { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['style', 'class'] }); }); }
+  function close() { ov.classList.remove('show'); if (obs) obs.disconnect(); obs = null; }
+  function toggle() { ov.classList.contains('show') ? close() : open(); }
+  var b = document.createElement('button'); b.id = 'xpBtn'; b.textContent = '説明 ⤢'; b.title = '説明を大きく表示 (i)'; b.onclick = toggle;
+  var tb = document.getElementById('themeBtn'); if (tb) tb.before(b); else document.body.append(b);
+  ov.addEventListener('click', function (e) { if (e.target === ov || e.target.classList.contains('xp-close')) close(); });
+  addEventListener('keydown', function (e) {
+    var tag = (e.target.tagName || '').toLowerCase(); if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+    if (e.key === 'i' && !e.metaKey && !e.ctrlKey && !e.altKey) { toggle(); e.preventDefault(); }
+    else if (e.key === 'Escape' && ov.classList.contains('show')) { close(); e.stopImmediatePropagation(); }
+  }, true);
+  els().forEach(function (p) { p[0].classList.add('xp-src'); p[0].title = p[0].title || 'クリックで説明を大きく表示'; });
+  document.addEventListener('click', function (e) {
+    if (ov.contains(e.target) || e.target.closest('button,input,select,a,label,svg,canvas,textarea,.js-plotly-plot')) return;
+    if (e.target.closest('.xp-src')) open();
+  });
+})();</script>
+<script src="embed.js"></script>
+</body>
+</html>

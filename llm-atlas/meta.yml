@@ -1,0 +1,16 @@
+# 主題の情報．講演の原本の meta.yml から publish.mk (make publish) が作る．
+title: 大規模言語モデルの地図
+subtitle: 言語モデルを確率分布の族として並べる
+lang: ja
+authors:
+- name: 村田 昇
+abstract: '大規模言語モデル (LLM) は，文章を受け取って次の語の確率分布を返す条件付き確率のモデルである． LLM の働きを統計の言葉で整理し (N-gram の表から連続な関数，対数双線形モデル，Transformer による文脈のベクトル)， 多数の LLM を確率分布 (の族) と対応づけて並べる二つの方法，出力の同時分布を比べる同時分布の地図と， 潜在空間の Fisher 計量で測った文書どうしの関係を比べる条件付き分布の族の地図を情報幾何の枠組みで述べ， 100 個の LLM で両者を比べる．
+
+  '
+license: CC-BY-NC-4.0
+publish:
+  notes: false
+  figures_cleared: true
+items: []
+id: llm-atlas
+updated: 2026-11-19

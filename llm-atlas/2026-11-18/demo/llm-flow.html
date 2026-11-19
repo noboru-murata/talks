@@ -1,0 +1,601 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<script>/* 明暗の既定は明 (OS の設定には従わない)．?theme=dark で暗く開く */
+(function () { var t = new URLSearchParams(location.search).get('theme'); document.documentElement.dataset.theme = t === 'dark' ? 'dark' : 'light'; })();</script>
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LLM の流れ</title>
+<!--
+  llm-flow.html — LLM の働きを場面ごとに送って見せるデモ (6 場面)．講演のスライド「出力は多クラスのロジスティック回帰」
+  「文脈の座標を作るのが Transformer」「点の集合を，点の集合に変える」「層ごとに少しずつ動く」に対応する．
+  数値は llm-anatomy-data.js (code/llm_anatomy.py が作る．2 次元の作り物)．外部のライブラリは使わない．
+  ?scene=1〜6 で開く場面を選べる．⏮ ⏭ (Shift+← →) は段を飛ばして場面を移る．操作: 「次」(→ キー，スペース) で場面の中の段を進め，終わったら次の場面へ．「前」(← キー) で戻る．
+-->
+<script src="llm-anatomy-data.js"></script>
+<style>
+:root {
+  color-scheme: light;
+  --surface-0: #f4f3f0; --surface-1: #fcfcfb; --surface-2: #efeeea;
+  --line: #dddbd5; --grid: #e9e7e2;
+  --text-primary: #0b0b0b; --text-secondary: #52514e; --text-muted: #7c7b76;
+  --accent: #1baf7a; --gray: #9a9893; --a: #2a78d6; --b: #eb6834; --c: #8a5cc2; --ring: #0b0b0b; --pale: #c9c7c0;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --surface-0: #121211; --surface-1: #1a1a19; --surface-2: #242422; --line: #34332f; --grid: #2a2a27;
+    --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #8f8e86;
+    --accent: #199e70; --gray: #77766f; --a: #3987e5; --b: #d95926; --c: #a57ad8; --ring: #f0efec; --pale: #4a4944;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface-0: #121211; --surface-1: #1a1a19; --surface-2: #242422; --line: #34332f; --grid: #2a2a27;
+  --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #8f8e86;
+  --accent: #199e70; --gray: #77766f; --a: #3987e5; --b: #d95926; --c: #a57ad8; --ring: #f0efec; --pale: #4a4944;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: var(--surface-0); color: var(--text-primary);
+  font: 14px/1.55 -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", "Segoe UI", sans-serif;
+  display: grid; grid-template-rows: auto auto 1fr auto; overflow: hidden; }
+header { display: flex; gap: 8px; align-items: center; flex-wrap: nowrap; overflow-x: auto; white-space: nowrap; height: 48px; padding: 0 16px; background: var(--surface-1); border-bottom: 1px solid var(--line); }
+header h1 { font-size: 16px; margin: 0 10px 0 0; font-weight: 600; }
+.badge { font-size: 11.5px; color: var(--text-muted); border: 1px solid var(--line); border-radius: 10px; padding: 0 8px; }
+nav.steps { display: flex; gap: 4px; flex-wrap: nowrap; }
+button, input[type=range] { font: inherit; }
+button { color: var(--text-primary); background: var(--surface-1); border: 1px solid var(--line); border-radius: 6px; padding: 3px 9px; cursor: pointer; }
+button:hover:not(:disabled) { background: var(--surface-2); }
+button:disabled { opacity: .45; cursor: default; }
+button[aria-current="step"], button.on { border-color: var(--a); color: var(--a); }
+button.go { border-color: var(--a); background: var(--a); color: #fff; font-weight: 600; }
+.seg { display: inline-flex; } .seg button { border-radius: 0; margin-left: -1px; }
+.seg button:first-child { border-radius: 6px 0 0 6px; margin-left: 0; } .seg button:last-child { border-radius: 0 6px 6px 0; }
+.intro { height: 92px; overflow-y: auto; padding: 10px 18px 8px; background: var(--surface-1); border-bottom: 1px solid var(--line); }   /* 高さを固定 */
+.intro h2 { font-size: 17px; margin: 0 0 3px; font-weight: 600; }
+.intro p { margin: 0; color: var(--text-secondary); max-width: 1100px; }
+main { min-height: 0; display: grid; grid-template-columns: 1fr 300px; background: var(--surface-1); }
+#stage { width: 100%; height: 100%; display: block; min-width: 0; min-height: 0; user-select: none; }
+.side { border-left: 1px solid var(--line); padding: 12px 14px; overflow-y: auto; font-size: 13px; color: var(--text-secondary); }
+.side h3 { font-size: 13px; margin: 4px 0 6px; color: var(--text-primary); }
+.bars .r { display: grid; grid-template-columns: 64px 1fr 46px; gap: 8px; align-items: center; font-size: 12.5px; margin: 3px 0; }
+.bars .t { height: 10px; background: var(--surface-2); border-radius: 3px; overflow: hidden; }
+.bars .t i { display: block; height: 100%; background: var(--gray); }
+.bars .r.top .t i { background: var(--accent); }
+.bars .v { text-align: right; font-variant-numeric: tabular-nums; }
+.key { display: flex; gap: 6px; align-items: center; margin: 3px 0; }
+.key i { width: 12px; height: 12px; border-radius: 50%; display: inline-block; flex: none; }
+footer { display: grid; grid-template-columns: auto 1fr auto auto; gap: 14px; align-items: center; padding: 7px 12px; background: var(--surface-1); border-top: 1px solid var(--line); font-size: 13px; height: 52px; }   /* 1 行に固定 */
+footer .navg { display: flex; gap: 8px; align-items: center; }
+#page { min-width: 38px; text-align: center; font-variant-numeric: tabular-nums; }
+#prev { min-width: 64px; } #next { min-width: 210px; }
+.tools { display: flex; gap: 8px; align-items: center; flex-wrap: nowrap; overflow-x: auto; white-space: nowrap; }
+.tools label { display: inline-flex; gap: 6px; align-items: center; color: var(--text-secondary); }
+.tools input[type=range] { width: 220px; accent-color: var(--a); }
+.readout { color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+svg text { font-family: -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif; }
+.fade { transition: opacity .5s; }
+@media (prefers-reduced-motion: reduce) { .fade { transition: none; } }
+@media (max-width: 760px) { main { grid-template-columns: 1fr; grid-template-rows: 1fr auto; } .side { border-left: 0; border-top: 1px solid var(--line); max-height: 30vh; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>LLM の流れ：入力から順に点と矢印で見る</h1>
+  <nav class="steps" id="steps"></nav>
+  <span class="badge">2 次元の作り物</span>
+</header>
+<section class="intro"><h2 id="title"></h2><p id="prompt"></p></section>
+<main>
+  <svg id="stage" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"></svg>
+  <aside class="side" id="side"></aside>
+</main>
+<footer><div class="navg"><button id="skipPrev" title="前の場面へ (段を飛ばす．Shift+←)">⏮</button><button id="prev">← 前</button><span id="page"></span><button id="next">次の場面 →</button><button id="skipNext" title="次の場面へ (段を飛ばす．Shift+→)">⏭</button></div><div class="tools" id="tools"></div><button id="themeBtn" title="明暗の切替">明暗</button></footer>
+<script>
+'use strict';
+(() => {
+const D = window.LLM_ANATOMY;
+if (!D) { document.body.innerHTML = '<p style="padding:20px">llm-anatomy-data.js がありません (python3 code/llm_anatomy.py で作る)．</p>'; return; }
+const $ = s => document.querySelector(s);
+const NS = 'http://www.w3.org/2000/svg';
+const svg = $('#stage');
+const el = (tag, attrs = {}, parent = svg, text) => { const e = document.createElementNS(NS, tag); for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v); if (text != null) e.textContent = text; parent.append(e); return e; };
+const lerp = (a, b, t) => a + (b - a) * t;
+const ease = t => t < .5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
+const motion = matchMedia('(prefers-reduced-motion: reduce)');
+const L = D.L, EMB = D.emb, CANDS = D.cands;
+// 文脈の広がりの模式 (長い 2 文．注意の幅が層とともに広がる)．古いデータ (ctx が無い) なら短い 2 文を使う
+const C = D.ctx || { sent: D.sent, traj: D.traj, att: D.att, width: null };
+const SENT = C.sent;
+const COL = { A: 'var(--a)', B: 'var(--b)' };
+const LABEL = { A: '文 A「' + SENT.A.join(' ') + '」(川)', B: '文 B「' + SENT.B.join(' ') + '」(金融)' };
+const FUNC = new Set(['the', 'on', 'in', 'to', 'down', 'from', 'her', 'she', 'of']);
+// 座標 (データの 2 次元) → svg．y は上向き
+const S = 60;                                  // 1 単位 = 60px
+const P = ([x, y]) => [x * S, -y * S];
+const last = k => C.traj[k][L][SENT[k].length - 1];
+const dot = (a, b) => a[0] * b[0] + a[1] * b[1];
+const sub2 = i => String.fromCharCode(0x2080 + ((i + 1) % 10));
+const tokName = (k, i) => SENT[k][i] + (i + 1 >= 10 ? '₁' : '') + sub2(i);
+function probs(h, temp = 1) {
+  const z = CANDS.map(w => dot(h, EMB[w]) / temp), m = Math.max(...z), e = z.map(v => Math.exp(v - m)), s = e.reduce((a, b) => a + b, 0);
+  return { z, p: e.map(v => v / s) };
+}
+
+// ---------------------------------------------------------------- 場面 (Transformer の計算の順: 入力 → 層 → 文脈のベクトル → 内積と確率)
+const SC = ['input', 'layers', 'interact', 'ctx', 'output', 'compare', 'pipeline', 'set2set'];
+const stages = ['入力', '層を進める', '相互作用の広がり', '文脈のベクトル', '内積と確率', '文 A と文 B', '付録 全体像', '付録 集合から集合へ'];
+const titles = [
+  '入力: トークンを，語ごとに決まった初期の位置に置く',
+  '層を進めると，相互作用で各トークンの点が少しずつ修正される',
+  'トークンの相互作用は，近傍から文全体へ広がる',
+  '最後の層の，最後の位置の点が文脈のベクトル 𝐱 になる',
+  '語の点 (固定) と 𝐱 の内積の softmax で，次の語の確率が決まる',
+  '同じ bank でも，文脈で 𝐱 の向きが変わり，次の語が変わる',
+  '付録: 全体像 (トークン → 埋め込み → 層 → 𝐱 → 内積と softmax)',
+  '付録: 1 つの層は，点の集合を点の集合に変える'];
+const prompts = [
+  `文のトークンを並べ (左)，それぞれを語ごとに決まった初期の位置 (語の埋め込み．層 0) に置く (右)．この時点では文脈を見ていないので，同じ語なら同じ位置．`,
+  `左ははしご: 下から上へ層を重ね，各層で前のトークンから情報を集める (線の太さは注意の重み)．右は同じ層での点の配置．スライダーか「再生」で層を進めると両方が同時に動く (全 ${L} 層)．`,
+  '左は注意の重み w_ij (行 i のトークンが列 j のトークンから集める重み．前の語だけ)，右は各トークンの点と，重みの大きい組を結ぶ線．浅い層では隣の語どうし，深い層では文全体が影響しあう．',
+  'すべての層を通した後，最後の位置 (bank) の点を文脈 x のベクトル 𝐱 とする．他の位置の点も文脈を反映しているが，次の語の予測に使うのは最後の位置．',
+  '候補の語 y の点 𝐲 は学習で決まり固定．𝐱 の向きへの射影 (内積 ⟨𝐱, 𝐲⟩) の大きい語ほど確率が高い．矢印の先をドラッグして向きを変えられる．矢印が長いほど確率の差が開く．',
+  '文 A (川) と文 B (金融) の 𝐱 を重ねる．矢印の向きが違うので，次の語の確率が変わる．',
+  'トークンごとに埋め込みを与え，Transformer の層を何十層も重ねて文脈を反映させ，最後の位置のベクトルを 𝐱 とする．出力層は 𝐱 と語のベクトル 𝐲 の内積の softmax で確率を出す．',
+  `文 A の ${SENT.A.length} 個のトークンの点 (層 0) が，注意で前のトークンの情報を集めて動く．線の太さは最後のトークン bank が前のトークンから集める重み．点の数と次元は変わらない．`];
+let step = 0, sub = 0;
+const nav = $('#steps');
+const QP = new URLSearchParams(location.search), qScene = +QP.get('scene') || 1;
+const clampS = n => Math.max(0, Math.min(stages.length - 1, n));
+const NMAIN = 6;                                       // 本編は場面 1〜6．付録は ?scene=7 などで開く
+const LO = clampS((+QP.get('from') || 1) - 1), HI = Math.max(LO, clampS((+QP.get('to') || (qScene > NMAIN ? stages.length : NMAIN)) - 1));
+stages.forEach((s, i) => { const b = document.createElement('button'); b.textContent = `${i + 1} ${s}`; b.addEventListener('click', () => go(i)); if (i < LO || i > HI) b.style.display = 'none'; nav.append(b); });
+
+// 場面ごとの段 (「次」で進める)
+const SUBS = {
+  input: ['トークン', '初期の位置 (層 0)'],
+  layers: ['層 0', '再生'],
+  interact: ['浅い層', '中ほどの層', '深い層'],
+  ctx: ['最後の層の点', '最後の位置 = 𝐱', '文 B: 層 0', '文 B: 層を進める', '文 B の 𝐱'],   // 段 2〜4: 文 A の後に文 B の動きと 𝐱 (2026-11-17)
+  output: ['語の点 (固定)', '𝐱 を置く', '射影と確率'],
+  compare: ['文 A', '文 B を重ねる'],
+  pipeline: ['トークン', '埋め込み', 'Transformer の層', '文脈のベクトル 𝐱', '内積と softmax', '次の語'],
+  set2set: ['層 0 の点', '注意で集める', '動かす']};
+const ILAYERS = [3, 23, L - 1];               // 相互作用の場面で見せる層 (0 始まり)
+const SET_L = 14;                             // 集合から集合への場面で動かす層の数
+const cur = () => SC[step];
+
+// ---------------------------------------------------------------- 状態
+let h = last('A').slice(), hLen = 1, layer = 0, ilayer = ILAYERS[0], isent = 'A', fsent = 'A', playing = 0;
+let blayer = 0;                                      // 文脈のベクトルの場面で，文 B を進める層
+
+// ---------------------------------------------------------------- 描画の部品
+function axes(view) {
+  const [x0, y0, w, hh] = view;
+  for (let g = Math.ceil(x0 / S); g <= (x0 + w) / S; g++) el('line', { x1: g * S, x2: g * S, y1: y0, y2: y0 + hh, stroke: 'var(--grid)', 'stroke-width': 1 });
+  for (let g = Math.ceil(y0 / S); g <= (y0 + hh) / S; g++) el('line', { x1: x0, x2: x0 + w, y1: g * S, y2: g * S, stroke: 'var(--grid)', 'stroke-width': 1 });
+  el('circle', { cx: 0, cy: 0, r: 2.5, fill: 'var(--text-muted)' });
+}
+function arrow(from, to, color, width = 3, id = '') {
+  const [x1, y1] = P(from), [x2, y2] = P(to), a = Math.atan2(y2 - y1, x2 - x1), hl = 12;
+  const g = el('g', id ? { id } : {});
+  el('line', { x1, y1, x2: x2 - Math.cos(a) * hl * .8, y2: y2 - Math.sin(a) * hl * .8, stroke: color, 'stroke-width': width, 'stroke-linecap': 'round' }, g);
+  el('path', { d: `M${x2} ${y2} L${x2 - hl * Math.cos(a - .4)} ${y2 - hl * Math.sin(a - .4)} L${x2 - hl * Math.cos(a + .4)} ${y2 - hl * Math.sin(a + .4)}Z`, fill: color }, g);
+  return g;
+}
+function bars(pr, title) {
+  const order = pr.p.map((v, i) => i).sort((a, b) => pr.p[b] - pr.p[a]);
+  return `<h3>${title}</h3><div class="bars">` + order.map((i, r) => `<div class="r ${r < 3 ? 'top' : ''}"><span>${CANDS[i]}</span><span class="t"><i style="width:${(pr.p[i] / pr.p[order[0]] * 100).toFixed(1)}%"></i></span><span class="v">${(pr.p[i] * 100).toFixed(1)}%</span></div>`).join('') + '</div>';
+}
+
+// 場面 1 と 6: 語の点と矢印
+function drawOutput(arrows, showProj) {
+  const view = [-3.3 * S, -2.6 * S, 6.6 * S, 4.6 * S];
+  svg.setAttribute('viewBox', view.join(' '));
+  axes(view);
+  const main = arrows[0];
+  const pr = probs(main.h.map(v => v * main.len));
+  const order = pr.p.map((v, i) => i).sort((a, b) => pr.p[b] - pr.p[a]);
+  const top = new Set(order.slice(0, 3));
+  const n = Math.hypot(...main.h) || 1, u = main.h.map(v => v / n);
+  if (showProj) {
+    el('line', { x1: -u[0] * 4 * S, y1: u[1] * 4 * S, x2: u[0] * 4 * S, y2: -u[1] * 4 * S, stroke: 'var(--pale)', 'stroke-dasharray': '4 4' });
+    CANDS.forEach((w, i) => { const e = EMB[w], q = dot(e, u); el('line', { x1: P(e)[0], y1: P(e)[1], x2: P([u[0] * q, u[1] * q])[0], y2: P([u[0] * q, u[1] * q])[1], stroke: top.has(i) ? 'var(--accent)' : 'var(--pale)', 'stroke-dasharray': '2 3' }); });
+  }
+  CANDS.forEach((w, i) => {
+    const [x, y] = P(EMB[w]), on = showProj && top.has(i);
+    el('circle', { cx: x, cy: y, r: on ? 7 : 5.5, fill: on ? 'var(--accent)' : 'var(--gray)', stroke: 'var(--surface-1)', 'stroke-width': 1.5 });
+    el('text', { x: x + 8, y: y - 6, 'font-size': 12, fill: on ? 'var(--text-primary)' : 'var(--text-secondary)', 'font-weight': on ? 600 : 400 }, svg, w);
+  });
+  arrows.forEach(a => { if (a.show !== false) { const g = arrow([0, 0], a.h.map(v => v * a.len), a.color, 3.5); if (a.drag) { g.style.cursor = 'grab'; g.addEventListener('pointerdown', startDrag); } } });
+  return pr;
+}
+function startDrag(e) {
+  e.preventDefault();
+  const base = Math.hypot(...last('A'));
+  const move = ev => { const pt = svg.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY; const q = pt.matrixTransform(svg.getScreenCTM().inverse());
+    const v = [q.x / S, -q.y / S], n = Math.hypot(...v); if (n < .2) return; h = v.map(c => c / n * base); hLen = Math.min(2.5, Math.max(.2, n / base)); render(false); };
+  const up = () => { removeEventListener('pointermove', move); removeEventListener('pointerup', up); };
+  addEventListener('pointermove', move); addEventListener('pointerup', up);
+}
+
+// 場面 2: 全体像の流れ
+function drawPipeline() {
+  svg.setAttribute('viewBox', '0 0 1000 520');
+  const on = k => k <= sub;
+  const box = (x, y, w, hh, text, k, color = 'var(--a)') => {
+    const g = el('g', { class: 'fade', opacity: on(k) ? 1 : .18 });
+    el('rect', { x, y, width: w, height: hh, rx: 10, fill: 'var(--surface-2)', stroke: k === sub ? color : 'var(--line)', 'stroke-width': k === sub ? 2.5 : 1 }, g);
+    text.split('\n').forEach((t, i, arr) => el('text', { x: x + w / 2, y: y + hh / 2 + (i - (arr.length - 1) / 2) * 18 + 5, 'text-anchor': 'middle', 'font-size': 15, fill: 'var(--text-primary)' }, g, t));
+  };
+  const toks = SENT.A, n = toks.length, x0 = 100, dx = Math.min(120, 560 / (n - 1));
+  toks.forEach((t, i) => {
+    const x = x0 + i * dx;
+    const g = el('g', { class: 'fade', opacity: on(0) ? 1 : .18 });
+    el('text', { x, y: 495, 'text-anchor': 'middle', 'font-size': 14, fill: 'var(--text-primary)' }, g, t);
+    const g1 = el('g', { class: 'fade', opacity: on(1) ? 1 : .18 });
+    el('line', { x1: x, y1: 478, x2: x, y2: 440, stroke: 'var(--pale)', 'stroke-width': 1.5 }, g1);
+    el('circle', { cx: x, cy: 430, r: 8, fill: 'var(--surface-1)', stroke: 'var(--gray)', 'stroke-width': 2 }, g1);
+    const g2 = el('g', { class: 'fade', opacity: on(2) ? 1 : .18 });
+    for (let k = 1; k <= 4; k++) {
+      const y = 430 - k * 62;
+      el('line', { x1: x, y1: y + 62 - 8, x2: x, y2: y + 8, stroke: 'var(--pale)', 'stroke-width': 1.5 }, g2);
+      // 浅い層は隣だけ，深い層ほど遠くまで (注意の広がり)
+      const reach = [1, 2, 3, n][k - 1];
+      if (k < 4) for (let j = Math.max(0, i - reach); j < i; j++) el('line', { x1: x0 + j * dx, y1: y + 62 - 8, x2: x, y2: y + 8, stroke: 'var(--pale)', 'stroke-width': .8, opacity: .7 }, g2);
+      el('circle', { cx: x, cy: y, r: 8, fill: i === n - 1 && k === 4 ? 'var(--a)' : 'var(--surface-1)', stroke: 'var(--a)', 'stroke-width': 2 }, g2);
+    }
+  });
+  el('text', { x: 16, y: 434, 'font-size': 13, fill: 'var(--text-muted)', class: 'fade', opacity: on(1) ? 1 : .18 }, svg, '埋め込み');
+  ['第 1 層', '第 2 層', '…', `第 ${L} 層`].forEach((t, k) => el('text', { x: 16, y: 430 - (k + 1) * 62 + 4, 'font-size': 13, fill: 'var(--text-muted)', class: 'fade', opacity: on(2) ? 1 : .18 }, svg, t));
+  const xl = x0 + (n - 1) * dx;
+  const g3 = el('g', { class: 'fade', opacity: on(3) ? 1 : .18 });
+  el('line', { x1: xl + 12, y1: 182, x2: 780, y2: 182, stroke: 'var(--a)', 'stroke-width': 2 }, g3);
+  el('text', { x: (xl + 780) / 2 + 4, y: 172, 'text-anchor': 'middle', 'font-size': 14, fill: 'var(--a)' }, g3, '文脈のベクトル 𝐱');
+  box(790, 140, 180, 84, '内積 ⟨𝐱, 𝐲⟩\n＋ softmax', 4, 'var(--accent)');
+  const g5 = el('g', { class: 'fade', opacity: on(5) ? 1 : .18 });
+  el('line', { x1: 880, y1: 226, x2: 880, y2: 280, stroke: 'var(--accent)', 'stroke-width': 2 }, g5);
+  const pr = probs(last('A'));
+  const order = pr.p.map((v, i) => i).sort((a, b) => pr.p[b] - pr.p[a]).slice(0, 4);
+  order.forEach((i, r) => { el('text', { x: 800, y: 304 + r * 22, 'font-size': 14, fill: 'var(--text-primary)' }, g5, CANDS[i]);
+    el('rect', { x: 870, y: 292 + r * 22, width: pr.p[i] / pr.p[order[0]] * 90, height: 12, rx: 3, fill: r === 0 ? 'var(--accent)' : 'var(--gray)' }, g5); });
+  el('text', { x: 880, y: 130, 'text-anchor': 'middle', 'font-size': 13, fill: 'var(--text-muted)', class: 'fade', opacity: on(4) ? 1 : .18 }, svg, '出力層');
+}
+
+// 場面 3: 集合から集合へ
+function drawSetToSet() {
+  const view = [-3.0 * S, -2.6 * S, 6 * S, 4.8 * S];
+  svg.setAttribute('viewBox', view.join(' '));
+  axes(view);
+  const k = 'A', toks = SENT[k], n = toks.length, l1 = SET_L;
+  const t = sub < 2 ? 0 : 1;
+  const pos = i => { const a = C.traj[k][0][i], b = C.traj[k][l1][i]; return [lerp(a[0], b[0], t), lerp(a[1], b[1], t)]; };
+  if (sub >= 1) {
+    const w = C.att[k][0][n - 1];
+    for (let j = 0; j < n; j++) { if (w[j] < .01) continue; const [x1, y1] = P(C.traj[k][0][j]), [x2, y2] = P(pos(n - 1));
+      el('line', { x1, y1, x2, y2, stroke: 'var(--b)', 'stroke-width': .5 + w[j] * 9, opacity: .55, 'stroke-linecap': 'round' }); }
+  }
+  if (sub >= 2) toks.forEach((_, i) => { const [x1, y1] = P(C.traj[k][0][i]), [x2, y2] = P(pos(i));
+    el('circle', { cx: x1, cy: y1, r: 5, fill: 'var(--surface-1)', stroke: 'var(--pale)', 'stroke-width': 1.5 });
+    el('line', { x1, y1, x2, y2, stroke: 'var(--pale)', 'stroke-width': 1.2, 'stroke-dasharray': '3 3' }); });
+  toks.forEach((w, i) => {
+    const [x, y] = P(pos(i)); const isLast = i === n - 1;
+    el('circle', { cx: x, cy: y, r: isLast ? 8 : 6, fill: isLast ? 'var(--a)' : 'var(--surface-1)', stroke: 'var(--a)', 'stroke-width': 2 });
+    el('text', { x: x + 7, y: y - 5 + ((i % 2) ? 11 : 0), 'font-size': 9.5, fill: 'var(--text-primary)', 'font-weight': isLast ? 600 : 400 }, svg, tokName(k, i));
+  });
+  el('text', { x: view[0] + 8, y: view[1] + 14, 'font-size': 10, fill: 'var(--text-secondary)' }, svg, sub < 2 ? '層 0 (単独の語の埋め込み)' : `層 ${l1} (前のトークンの情報を集めた後)`);
+}
+
+// 場面 4: 相互作用の広がり (注意の重みの行列と点の間の線)
+function reach(k, l) {         // 重みで平均した距離 |i − j| (全トークン)
+  const W = C.att[k][l]; let s = 0, n = 0;
+  W.forEach((row, i) => { row.forEach((w, j) => { s += w * (i - j); }); n++; });
+  return s / n;
+}
+function drawInteract() {
+  svg.setAttribute('viewBox', '0 0 1000 560');
+  const k = isent, toks = SENT[k], n = toks.length, W = C.att[k][ilayer];
+  // 左: 行列
+  const x0 = 110, y0 = 70, cs = Math.min(40, 380 / n);
+  toks.forEach((t, i) => {
+    el('text', { x: x0 - 6, y: y0 + i * cs + cs / 2 + 4, 'text-anchor': 'end', 'font-size': 12, fill: 'var(--text-secondary)' }, svg, tokName(k, i));
+    el('text', { x: x0 + i * cs + cs / 2, y: y0 - 6, 'font-size': 12, fill: 'var(--text-secondary)', transform: `rotate(-60 ${x0 + i * cs + cs / 2} ${y0 - 6})` }, svg, tokName(k, i));
+    for (let j = 0; j < n; j++) {
+      const w = j <= i ? W[i][j] : null;
+      el('rect', { x: x0 + j * cs + 1, y: y0 + i * cs + 1, width: cs - 2, height: cs - 2, rx: 3, fill: w == null ? 'var(--surface-2)' : COL[k], 'fill-opacity': w == null ? 1 : Math.min(1, .06 + w * 1.4) });
+    }
+  });
+  el('text', { x: x0, y: y0 + n * cs + 26, 'font-size': 13, fill: 'var(--text-muted)' }, svg, '行 i が列 j から集める重み (前の語だけ)');
+  // 右: 点と線
+  const cx = 735, cy = 290, sc = 82;
+  const Q = ([x, y]) => [cx + x * sc, cy - y * sc];
+  el('rect', { x: cx - 2.7 * sc, y: cy - 2.7 * sc, width: 5.4 * sc, height: 5.4 * sc, fill: 'none', stroke: 'var(--grid)' });
+  const X = C.traj[k][ilayer + 1];
+  for (let i = 0; i < n; i++) for (let j = 0; j < i; j++) { const w = W[i][j]; if (w < .05) continue;
+    const [x1, y1] = Q(X[j]), [x2, y2] = Q(X[i]);
+    el('line', { x1, y1, x2, y2, stroke: COL[k], 'stroke-width': .6 + w * 7, opacity: .35 + w * .5, 'stroke-linecap': 'round' }); }
+  toks.forEach((t, i) => { const [x, y] = Q(X[i]), isB = i === n - 1;
+    el('circle', { cx: x, cy: y, r: isB ? 8 : 6, fill: isB ? COL[k] : 'var(--surface-1)', stroke: COL[k], 'stroke-width': 2 });
+    el('text', { x: x + 8, y: y - 6 + ((i % 2) ? 14 : 0), 'font-size': 12, fill: FUNC.has(t) ? 'var(--text-muted)' : 'var(--text-primary)', 'font-weight': isB ? 600 : 400 }, svg, tokName(k, i)); });
+  const names = ['浅い層', '中ほどの層', '深い層'];
+  const nm = ilayer <= 13 ? names[0] : ilayer <= 31 ? names[1] : names[2];
+  el('text', { x: cx - 2.7 * sc, y: 40, 'font-size': 15, fill: 'var(--text-primary)', 'font-weight': 600 }, svg, `第 ${ilayer + 1} 層 (${nm})`);
+  el('text', { x: cx - 2.7 * sc, y: 62, 'font-size': 13, fill: 'var(--text-secondary)' }, svg, `注意の届く距離の平均 ${reach(k, ilayer).toFixed(1)} 語`);
+}
+
+// 場面 5: 層ごとの軌跡
+function drawLayers() {
+  const view = [-3.0 * S, -2.5 * S, 6 * S, 4.9 * S];
+  svg.setAttribute('viewBox', view.join(' '));
+  axes(view);
+  for (const k of ['A', 'B']) {
+    SENT[k].forEach((w, i) => {
+      const isBank = w === 'bank';
+      if (!isBank && FUNC.has(w)) return;
+      const pts = C.traj[k].slice(0, layer + 1).map(lay => P(lay[i]));
+      el('polyline', { points: pts.map(p => p.join(',')).join(' '), fill: 'none', stroke: COL[k], 'stroke-width': isBank ? 2.4 : 1, opacity: isBank ? .95 : .4 });
+      const [x, y] = pts[pts.length - 1];
+      el('circle', { cx: x, cy: y, r: isBank ? 6 : 3.5, fill: COL[k], stroke: 'var(--surface-1)', 'stroke-width': 1.5 });
+      if (isBank) el('text', { x: x + (k === 'A' ? -10 : 10), y: y - 10, 'text-anchor': k === 'A' ? 'end' : 'start', 'font-size': 10, 'font-weight': 600, fill: COL[k] }, svg, `bank (${k})`);
+    });
+  }
+  const words = new Set([...SENT.A, ...SENT.B].filter(w => !FUNC.has(w) || w === 'the' || w === 'to'));
+  words.forEach(w => { const [x, y] = P(EMB[w]); el('circle', { cx: x, cy: y, r: 3.5, fill: 'var(--surface-1)', stroke: 'var(--text-primary)', 'stroke-width': 1 });
+    el('text', { x: x + 6, y: y - 6, 'font-size': 8.5, fill: 'var(--text-muted)' }, svg, w); });
+  const ph = layer <= 14 ? '浅い層: 隣の語 (to the) に引かれる' : layer <= 31 ? '中ほど: 数語先 (river / account) へ' : '深い層: 文全体の内容語へ';
+  el('text', { x: view[0] + 8, y: view[1] + 14, 'font-size': 9.5, fill: 'var(--text-secondary)' }, svg, `層 ${layer} / ${L}　${layer ? ph : ''}`);
+}
+
+// 場面 1, 2, 4: はしご (左) と点の配置 (右) を同時に
+function drawFlow(mode) {
+  svg.setAttribute('viewBox', '0 0 1000 560');
+  const bPhase = mode === 'ctx' && sub >= 2;            // 文 A の 𝐱 の後に，文 B を層 0 から進める
+  const k = bPhase ? 'B' : fsent, toks = SENT[k], n = toks.length, lv = mode === 'input' ? 0 : mode === 'ctx' ? (bPhase ? blayer : L) : layer;
+  const hiOn = mode === 'ctx' && (bPhase ? sub >= 4 : sub >= 1);
+  const showPts = !(mode === 'input' && sub === 0);
+  // ---- 左: はしご．縦は層 (下が層 0)
+  const x0 = 60, x1 = 500, yB = 500, yT = 70, dx = (x1 - x0) / (n - 1);
+  const Y = l => yB - (yB - yT) * l / L, X = i => x0 + i * dx;
+  for (let i = 0; i < n; i++) el('line', { x1: X(i), y1: Y(0), x2: X(i), y2: Y(L), stroke: 'var(--grid)', 'stroke-width': 2 });
+  [0, 12, 24, 36, L].forEach(l => { el('line', { x1: x0 - 10, y1: Y(l), x2: x1 + 10, y2: Y(l), stroke: 'var(--grid)', 'stroke-width': 1 });
+    el('text', { x: x0 - 16, y: Y(l) + 4, 'text-anchor': 'end', 'font-size': 11, fill: 'var(--text-muted)' }, svg, l === 0 ? '層 0' : String(l)); });
+  if (mode !== 'input') {
+    // 通ってきた層は濃く
+    for (let i = 0; i < n; i++) el('line', { x1: X(i), y1: Y(0), x2: X(i), y2: Y(lv), stroke: COL[k], 'stroke-width': 2.2, opacity: .45 });
+    // いまの層の注意 (層 lv−1 → lv)．重みの大きい組だけ
+    const la = Math.min(L - 1, Math.max(0, lv - 1)), W = C.att[k][la];
+    if (lv > 0) for (let i = 0; i < n; i++) for (let j = 0; j < i; j++) { const w = W[i][j]; if (w < .06) continue;
+      el('line', { x1: X(j), y1: Y(lv) + 22, x2: X(i), y2: Y(lv), stroke: COL[k], 'stroke-width': .6 + w * 6, opacity: .3 + w * .6, 'stroke-linecap': 'round' }); }
+    el('rect', { x: x0 - 12, y: Y(lv) - 9, width: x1 - x0 + 24, height: 18, rx: 9, fill: 'none', stroke: COL[k], 'stroke-width': 1.2, opacity: .6 });
+  }
+  for (let i = 0; i < n; i++) {
+    const isLast = i === n - 1, hi = hiOn && isLast;
+    if (mode !== 'input' || sub >= 1) el('circle', { cx: X(i), cy: Y(lv), r: hi ? 9 : 6, fill: hi || (isLast && mode !== 'input') ? COL[k] : 'var(--surface-1)', stroke: COL[k], 'stroke-width': 2 });
+    el('text', { x: X(i), y: yB + 30, 'text-anchor': 'middle', 'font-size': 14, fill: FUNC.has(toks[i]) ? 'var(--text-muted)' : 'var(--text-primary)', 'font-weight': isLast ? 600 : 400 }, svg, toks[i]);
+  }
+  el('text', { x: x0 - 16, y: yT - 26, 'font-size': 13, fill: 'var(--text-secondary)' }, svg, mode === 'input' ? '文のトークン (下) と初期の位置' : `層 ${lv} / ${L}`);
+  if (hiOn) { el('line', { x1: X(n - 1) + 12, y1: Y(L), x2: x1 + 70, y2: Y(L), stroke: COL[k], 'stroke-width': 2.5 });
+    el('text', { x: x1 + 74, y: Y(L) + 5, 'font-size': 16, fill: COL[k], 'font-weight': 600 }, svg, '𝐱'); }
+  // ---- 右: 点の配置
+  const cx = 790, cy = 280, sc = 66;
+  const Q = ([x, y]) => [cx + x * sc, cy - y * sc];
+  el('rect', { x: cx - 3.1 * sc, y: cy - 3.4 * sc, width: 6.2 * sc, height: 6.6 * sc, fill: 'none', stroke: 'var(--grid)' });
+  el('circle', { cx, cy, r: 2.5, fill: 'var(--text-muted)' });
+  // 文脈に依らない語の位置 (白丸)
+  new Set(toks).forEach(w => { const [x, y] = Q(EMB[w]); el('circle', { cx: x, cy: y, r: 3.5, fill: 'var(--surface-1)', stroke: 'var(--text-muted)', 'stroke-width': 1 });
+    el('text', { x: x + 6, y: y - 5, 'font-size': 10, fill: 'var(--text-muted)' }, svg, w); });
+  if (!showPts) return;
+  if (bPhase) {                                         // 比べるために文 A の bank の道筋と 𝐱 を薄く
+    const nA = SENT.A.length, ptsA = C.traj.A.map(lay => Q(lay[nA - 1]));
+    el('polyline', { points: ptsA.map(p => p.join(',')).join(' '), fill: 'none', stroke: COL.A, 'stroke-width': 1.6, opacity: .3 });
+    const [ax, ay] = ptsA[L]; el('text', { x: ax + 9, y: ay + 16, 'font-size': 11, fill: COL.A, opacity: .7 }, svg, '文 A の 𝐱');
+    const ga = arrow([0, 0], C.traj.A[L][nA - 1].map(v => v * sc / S), COL.A, 2.2); ga.setAttribute('transform', `translate(${cx} ${cy})`); ga.setAttribute('opacity', .35);
+  }
+  toks.forEach((w, i) => {
+    const isLast = i === n - 1;
+    if (mode !== 'input' && (isLast || !FUNC.has(w))) {
+      const pts = C.traj[k].slice(0, lv + 1).map(lay => Q(lay[i]));
+      el('polyline', { points: pts.map(p => p.join(',')).join(' '), fill: 'none', stroke: COL[k], 'stroke-width': isLast ? 2.4 : 1, opacity: isLast ? .9 : .35 });
+    }
+    const [x, y] = Q(C.traj[k][lv][i]), hi = hiOn && isLast;
+    el('circle', { cx: x, cy: y, r: isLast ? (hi ? 8 : 6.5) : 4.5, fill: isLast ? COL[k] : 'var(--surface-1)', stroke: COL[k], 'stroke-width': 1.8, opacity: hi || mode !== 'ctx' || !hiOn || isLast ? 1 : .35 });
+    if (isLast) el('text', { x: x + 9, y: y - 8, 'font-size': 12, 'font-weight': 600, fill: COL[k] }, svg, 'bank');
+  });
+  if (hiOn) { const g = arrow([0, 0], [(C.traj[k][L][n - 1][0]), (C.traj[k][L][n - 1][1])].map(v => v * sc / S), COL[k], 3);
+    g.setAttribute('transform', `translate(${cx} ${cy})`); }
+}
+
+// ---------------------------------------------------------------- 横の欄と操作
+const sentKeys = () => `<div class="key"><i style="background:var(--a)"></i>${LABEL.A}</div><div class="key"><i style="background:var(--b)"></i>${LABEL.B}</div>`;
+function side() {
+  const s = $('#side'), c = cur();
+  if (c === 'input') {
+    s.innerHTML = sentKeys() + '<p>トークンごとに，語で決まる初期の位置 (語の埋め込み) を与える．白丸がその位置で，ここでは点と白丸が重なる．</p><p>語順は位置の符号化 (絶対位置の埋め込みや RoPE) で入る (この模式では省いた)．</p>';
+  } else if (c === 'layers') {
+    s.innerHTML = sentKeys() + `<p>各層: 注意で前のトークンの値を重み付きで集め，MLP で個別に変換し，残差で元の点に足す．点の数と次元は変わらない．</p>
+      <p>残差の構造 x⁽ˡ⁺¹⁾ = x⁽ˡ⁾ + Δ⁽ˡ⁾(x⁽ˡ⁾) のため 1 層の動きは小さい．bank は，浅い層 (隣の語だけ) では両文とも同じように機能語の側へ下がり，中ほどで分かれ，深い層で内容語の側へ上がる．</p>
+      <p class="readout">はしごの線は注意の重みの大きい組 (浅い層は隣，深い層ほど遠く)．作り物の模式．</p>`;
+  } else if (c === 'interact') {
+    const r = ILAYERS.map(l => `第 ${l + 1} 層: ${reach(isent, l).toFixed(1)} 語`).join('<br>');
+    s.innerHTML = `<h3>注意の届く距離の平均</h3><p>${r}</p>` +
+      '<p>浅い層では隣の語の情報しか届かず，文 A でも文 B でも bank の周り (to the bank) は同じに見える．層が進むと数語先の river / account が，深い層では文全体 (boat, money …) が届き，同じ bank が文脈に応じた表現になる．</p>' +
+      `<p class="readout">模式の作り方: 重みに位置の近さの項 −(i−j)²/2s² を足し，幅 s を層とともに広げた (s = ${C.width ? C.width[ILAYERS[0]] + ' → ' + C.width[ILAYERS[2]] : '一定'})．本物の BERT でも，入力に近い層は近傍，深い層は文全体の寄与が目立つ (LIG)．</p>`;
+  } else if (c === 'ctx') {
+    s.innerHTML = sentKeys() + (sub < 2 ? '<p>最後の層の最後の位置の点を，文脈 x のベクトル 𝐱 とする (デコーダ型の LLM)．</p><p>次の場面で，この 𝐱 と語の点の内積から確率を読む．</p>'
+      : '<p>文 B (金融) でも同じ計算をする．bank の点は，浅い層では文 A と同じように動き，深い層で文 A と違う側 (金融の語の側) へ向かう．</p><p>薄い線と矢印は文 A の bank の道筋と 𝐱．同じ bank でも，最後の 𝐱 の向きが違う．</p>');
+  } else if (c === 'output') {
+    const pr = probs(h.map(v => v * hLen));
+    s.innerHTML = (sub >= 2 ? bars(pr, '次の語の確率 (内積の softmax)') : '<h3>次の語の確率</h3><p>「射影と確率」で表示する．</p>') +
+      `<h3 style="margin-top:12px">式</h3><p>p(y | x) = exp⟨𝐱, 𝐲⟩ / Σ<sub>y′</sub> exp⟨𝐱, 𝐲′⟩</p><p>統計の言葉では多クラスのロジスティック回帰．矢印の長さは 1/温度にあたる．</p>`;
+  } else if (c === 'compare') {
+    s.innerHTML = bars(probs(last('A')), '文 A (川) の次の語') + (sub >= 1 ? bars(probs(last('B')), '文 B (金融) の次の語') : '');
+  } else if (c === 'pipeline') {
+    s.innerHTML = '<h3>流れ</h3><ol>' + SUBS.pipeline.map((t, i) => `<li style="${i === sub ? 'color:var(--text-primary);font-weight:600' : ''}">${t}</li>`).join('') + '</ol>' +
+      '<p>埋め込みは語にベクトルを与え，Transformer の層は語の並びから文脈のベクトルを作り，出力層はベクトルの内積から確率を読む．</p>';
+  } else if (c === 'set2set') {
+    const w = C.att.A[0][SENT.A.length - 1];
+    s.innerHTML = '<h3>bank が集める重み (層 0)</h3><div class="bars">' + SENT.A.map((t, j) => `<div class="r"><span>${tokName('A', j)}</span><span class="t"><i style="width:${w[j] * 100}%;background:var(--b)"></i></span><span class="v">${(w[j] * 100).toFixed(0)}%</span></div>`).join('') + '</div>' +
+      `<p>ここでは ${SET_L} 層分の動きをまとめて見せる．点の数 N と次元 D は変わらない．</p><p class="readout">作り物の模式．</p>`;
+  }
+}
+function sentSeg(get, set) {
+  const seg = document.createElement('span'); seg.className = 'seg';
+  for (const k of ['A', 'B']) { const b = document.createElement('button'); b.textContent = `文 ${k}`; b.className = get() === k ? 'on' : ''; b.addEventListener('click', () => { set(k); render(); }); seg.append(b); }
+  return seg;
+}
+function tools() {
+  const T = $('#tools'), c = cur(); T.innerHTML = '';
+  if (c === 'input' || c === 'layers' || c === 'ctx') T.append(sentSeg(() => fsent, k => { fsent = k; }));
+  if (c === 'layers') {
+    const lab = document.createElement('label'); lab.innerHTML = `<span>層</span><input type="range" min="0" max="${L}" value="${layer}">`;
+    lab.querySelector('input').addEventListener('input', e => { stopPlay(); layer = +e.target.value; render(false); }); T.append(lab);
+  }
+  if (c === 'interact') {
+    T.append(sentSeg(() => isent, k => { isent = k; }));
+    const lab = document.createElement('label'); lab.innerHTML = `<span>層</span><input type="range" min="0" max="${L - 1}" value="${ilayer}">`;
+    lab.querySelector('input').addEventListener('input', e => { ilayer = +e.target.value; render(false); }); T.append(lab);
+  }
+  if (c === 'output') {
+    const seg = document.createElement('span'); seg.className = 'seg';
+    for (const k of ['A', 'B']) { const b = document.createElement('button'); b.textContent = `文 ${k} の 𝐱`; b.addEventListener('click', () => { h = last(k).slice(); hLen = 1; if (sub < 1) sub = 1; render(); }); seg.append(b); }
+    T.append(seg);
+    const lab = document.createElement('label'); lab.innerHTML = `<span>矢印の長さ</span><input type="range" min="20" max="250" value="${Math.round(hLen * 100)}">`;
+    lab.querySelector('input').addEventListener('input', e => { hLen = e.target.value / 100; render(false); }); T.append(lab);
+  }
+}
+function play() {
+  const id = ++playing, t0 = performance.now(), l0 = layer, ms = motion.matches ? 0 : 6000 * (L - l0) / L;
+  const tick = now => { if (id !== playing || cur() !== 'layers') return; const t = ms ? Math.min(1, (now - t0) / ms) : 1; layer = Math.round(lerp(l0, L, t));
+    const inp = document.querySelector('#tools input'); if (inp) inp.value = layer; render(false); if (t < 1) requestAnimationFrame(tick); else { playing++; navUpdate(); } };
+  requestAnimationFrame(tick);
+}
+const stopPlay = () => { playing++; };
+function playB() {                                    // 文脈のベクトルの場面の段 3: 文 B を層 0 から最後の層まで
+  const id = ++playing, t0 = performance.now(), l0 = blayer, ms = motion.matches ? 0 : 6000 * (L - l0) / L;
+  const tick = now => { if (id !== playing || cur() !== 'ctx' || sub !== 3) return; const t = ms ? Math.min(1, (now - t0) / ms) : 1; blayer = Math.round(lerp(l0, L, t));
+    render(false); if (t < 1) requestAnimationFrame(tick); else { playing++; navUpdate(); } };
+  requestAnimationFrame(tick);
+}
+
+// ---------------------------------------------------------------- 段と場面
+function pending() {
+  const c = cur(), subs = SUBS[c];
+  if (c === 'layers') return layer < L ? { label: layer === 0 ? '再生' : '最後の層まで', run: () => { sub = 1; play(); } } : null;
+  if (sub < subs.length - 1) return { label: subs[sub + 1], run: () => { sub++; onSub(true); render(); } };
+  return null;
+}
+function onSub(forward) {
+  if (cur() === 'ctx') { stopPlay(); if (sub <= 2) blayer = 0; else if (sub === 3 && forward) { blayer = 0; playB(); } else blayer = L; }
+  if (cur() === 'output' && sub === 1) { h = last(fsent).slice(); hLen = 1; }
+  if (cur() === 'interact') ilayer = ILAYERS[sub];
+}
+function back() {
+  if (cur() === 'layers') return layer > 0 ? () => { stopPlay(); layer = 0; sub = 0; render(); } : null;
+  if (sub > 0) return () => { sub--; onSub(false); render(); };
+  return null;
+}
+function navUpdate() {
+  const p = pending();
+  $('#next').textContent = p ? p.label + ' →' : '次の場面 →';
+  $('#next').classList.toggle('go', !!p);
+  $('#prev').disabled = step === LO && !back();
+  $('#next').disabled = step === HI && !p;
+  $('#skipPrev').disabled = step === LO;
+  $('#skipNext').disabled = step === HI;
+}
+function next() { const p = pending(); if (p) { p.run(); return true; } if (step < HI) { go(step + 1); return true; } return false; }
+function prev() { const b = back(); if (b) { b(); return true; } if (step > LO) { go(step - 1, true); return true; } return false; }
+// スライドに埋め込むとき (?embed．embed.js) の操作: 進めたら true
+window.demoSteps = { next, prev, start: () => go(LO), end: () => go(HI, true) };
+function go(n, backward = false) {
+  stopPlay(); step = n; const c = cur();
+  sub = backward ? SUBS[c].length - 1 : 0;
+  if (c === 'layers') layer = backward ? L : 0;
+  if (c === 'interact') ilayer = ILAYERS[sub];
+  if (c === 'output') { h = last(fsent).slice(); hLen = 1; }
+  if (c === 'ctx') blayer = backward ? L : 0;
+  render();
+}
+function render(full = true) {
+  [...nav.children].forEach((b, i) => { if (i === step) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current'); });
+  $('#title').textContent = titles[step]; $('#prompt').textContent = prompts[step];
+  $('#page').textContent = `${step - LO + 1} / ${HI - LO + 1}`;
+  svg.innerHTML = '';
+  const c = cur();
+  if (c === 'input' || c === 'layers' || c === 'ctx') drawFlow(c);
+  else if (c === 'interact') drawInteract();
+  else if (c === 'output') drawOutput([{ h, len: hLen, color: COL[fsent], show: sub >= 1, drag: true }], sub >= 2, sub === 0);
+  else if (c === 'compare') drawOutput([{ h: last('A'), len: 1, color: 'var(--a)' }, { h: last('B'), len: 1, color: 'var(--b)', show: sub >= 1 }], false);
+  else if (c === 'pipeline') drawPipeline();
+  else if (c === 'set2set') drawSetToSet();
+  side();
+  if (full) tools();
+  navUpdate();
+}
+$('#prev').addEventListener('click', prev);
+$('#next').addEventListener('click', next);
+$('#skipPrev').addEventListener('click', () => { if (step > LO) go(step - 1); });
+$('#skipNext').addEventListener('click', () => { if (step < HI) go(step + 1); });
+addEventListener('keydown', e => { if (e.target.closest('input')) return;
+  if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); e.shiftKey ? $('#skipNext').click() : next(); }
+  if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); e.shiftKey ? $('#skipPrev').click() : prev(); } });
+$('#themeBtn').addEventListener('click', () => { const dk = getComputedStyle(document.documentElement).colorScheme === 'dark'; document.documentElement.dataset.theme = dk ? 'light' : 'dark'; render(false); });
+go(Math.max(LO, Math.min(HI, qScene - 1)));
+})();
+</script>
+<script>window.XP_SRC = [['.intro', ''], ['#side', '右の欄']];</script>
+<style>
+#xpBtn { font: inherit; color: var(--text-primary); background: var(--surface-1); border: 1px solid var(--line); border-radius: 6px; padding: 3px 10px; cursor: pointer; }
+.xp-src { cursor: zoom-in; }
+#xpOv { position: fixed; inset: 0; z-index: 9999; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,.45); }
+#xpOv.show { display: flex; }
+#xpBox { background: var(--surface-1); color: var(--text-primary); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,.35);
+  width: min(92vw, 1100px); max-height: 88vh; overflow: auto; padding: 18px 26px 22px; position: relative; }
+#xpBox .xp-body { zoom: 1.7; line-height: 1.6; }
+#xpBox .xp-sec + .xp-sec { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--line); }
+#xpBox .xp-h { font-size: 11px; color: var(--text-muted); margin-bottom: 2px; }
+#xpBox .xp-close { position: absolute; top: 8px; right: 12px; font-size: 20px; line-height: 1; border: 0; background: none; color: var(--text-muted); cursor: pointer; }
+#xpBox .xp-hint { margin-top: 12px; font-size: 12px; color: var(--text-muted); }
+</style>
+<div id="xpOv"><div id="xpBox"><button class="xp-close" title="閉じる (Esc)">×</button><div class="xp-body" id="xpBody"></div>
+<div class="xp-hint">説明を大きく表示 (i または Esc で閉じる．← → の操作はそのまま効く)</div></div></div>
+<script>/* 説明の拡大表示: XP_SRC に並べた要素の中身を大きな窓に写す */
+(function () {
+  var SRC = window.XP_SRC || [], ov = document.getElementById('xpOv'), body = document.getElementById('xpBody'), obs = null;
+  function els() { var out = []; SRC.forEach(function (s) { document.querySelectorAll(s[0]).forEach(function (e) { out.push([e, s[1]]); }); }); return out; }
+  function visible(e) { return e.offsetParent !== null && e.textContent.trim() !== ''; }
+  function fill() {
+    body.innerHTML = '';
+    els().forEach(function (p) { if (!visible(p[0])) return;
+      var sec = document.createElement('div'); sec.className = 'xp-sec';
+      if (p[1]) { var h = document.createElement('div'); h.className = 'xp-h'; h.textContent = p[1]; sec.append(h); }
+      var c = p[0].cloneNode(true); c.removeAttribute('id'); c.querySelectorAll('[id]').forEach(function (x) { x.removeAttribute('id'); });
+      c.querySelectorAll('input,select,button,textarea').forEach(function (x) { x.remove(); });
+      c.classList.remove('xp-src'); c.style.maxHeight = 'none'; c.style.overflow = 'visible'; c.style.border = '0'; c.style.cursor = 'auto';
+      sec.append(c); body.append(sec); });
+    if (!body.children.length) body.textContent = '(この場面の説明はありません)';
+  }
+  function open() { fill(); ov.classList.add('show');
+    obs = new MutationObserver(function () { clearTimeout(obs.t); obs.t = setTimeout(fill, 60); });
+    els().forEach(function (p) { obs.observe(p[0], { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['style', 'class'] }); }); }
+  function close() { ov.classList.remove('show'); if (obs) obs.disconnect(); obs = null; }
+  function toggle() { ov.classList.contains('show') ? close() : open(); }
+  var b = document.createElement('button'); b.id = 'xpBtn'; b.textContent = '説明 ⤢'; b.title = '説明を大きく表示 (i)'; b.onclick = toggle;
+  var tb = document.getElementById('themeBtn'); if (tb) tb.before(b); else document.body.append(b);
+  ov.addEventListener('click', function (e) { if (e.target === ov || e.target.classList.contains('xp-close')) close(); });
+  addEventListener('keydown', function (e) {
+    var tag = (e.target.tagName || '').toLowerCase(); if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+    if (e.key === 'i' && !e.metaKey && !e.ctrlKey && !e.altKey) { toggle(); e.preventDefault(); }
+    else if (e.key === 'Escape' && ov.classList.contains('show')) { close(); e.stopImmediatePropagation(); }
+  }, true);
+  els().forEach(function (p) { p[0].classList.add('xp-src'); p[0].title = p[0].title || 'クリックで説明を大きく表示'; });
+  document.addEventListener('click', function (e) {
+    if (ov.contains(e.target) || e.target.closest('button,input,select,a,label,svg,canvas,textarea,.js-plotly-plot')) return;
+    if (e.target.closest('.xp-src')) open();
+  });
+})();</script>
+<script src="embed.js"></script>
+</body>
+</html>

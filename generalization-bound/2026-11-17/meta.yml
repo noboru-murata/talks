@@ -1,0 +1,27 @@
+# 講演の版の情報．講演の原本の meta.yml (editions) から publish.mk (make publish-edition) が作る．
+# 講演の日の翌日から固定 (talks/PUBLISHING.md)．
+edition: '2026-11-17'
+topic: generalization-bound
+title: 汎化誤差の評価
+subtitle: 上界の系譜と関数空間からの見方
+date: 2026-11-17
+venue: RIMS 共同研究 (公開型)「関数空間論とその周辺」(京都大学数理解析研究所)
+kind: 講演
+items:
+- kind: slides
+  path: talk/generalization-bound.html
+  label: スライド
+- kind: handout
+  path: talk/generalization-bound-handout.pdf
+  label: 配布用 PDF
+- kind: report
+  path: talk/generalization-bound-abstract.html
+  label: アブスト
+- kind: report-pdf
+  path: talk/generalization-bound-abstract.pdf
+  label: アブスト (PDF)
+license: CC-BY-NC-4.0
+publish:
+  notes: false
+  figures_cleared: true
+published: 2026-11-19

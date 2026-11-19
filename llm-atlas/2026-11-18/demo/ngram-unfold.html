@@ -1,0 +1,812 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<script>/* 明暗の既定は明 (OS の設定には従わない)．?theme=dark で暗く開く */
+(function () { var t = new URLSearchParams(location.search).get('theme'); document.documentElement.dataset.theme = t === 'dark' ? 'dark' : 'light'; })();</script>
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>N-gram の展開</title>
+<!--
+  ngram-unfold.html — N-gram の表を展開し，並べ替え，座標を当てて滑らかな簡単な関数で穴を埋める (9 場面)．講演の説明用．
+  llm-diagrams (edoaki.github.io/llm-diagrams) の ngram-to-llm / table-to-continuous の例に合わせ，
+  2-gram → 3-gram の一般化 (直前 N−1 語を 1 列に展開した V^(N−1) × V の表) と，楕円に限らない滑らかな関数を足した．
+  数値は ngram-unfold-data.js (code/ngram_unfold.py が作る)．値は説明用の作り物．外部のライブラリは使わない．
+  ?scene=1〜9 で開く場面を選べる (スライドの iframe 用)．⏮ ⏭ (Shift+← →) は段を飛ばして場面を移る．
+-->
+<script src="ngram-unfold-data.js"></script>
+<style>
+:root {
+  color-scheme: light;
+  --surface-0: #f4f3f0; --surface-1: #fcfcfb; --surface-2: #efeeea;
+  --line: #dddbd5; --text-primary: #0b0b0b; --text-secondary: #52514e; --text-muted: #7c7b76;
+  --subj: #2a78d6; --verb: #eb6834; --obj: #1baf7a; --hole: #fcf0d8; --hole-line: #d9a441; --hole-text: #a5761b;
+  --empty: #f1f0ec; --a: #2a78d6; --lo: rgb(242,246,237); --hi: rgb(29,107,86);
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --surface-0: #121211; --surface-1: #1a1a19; --surface-2: #242422; --line: #34332f;
+    --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #8f8e86; --empty: #262624; --a: #3987e5;
+    --subj: #5a9be8; --verb: #f0844f; --obj: #2cc28c;
+    --hole: #4a3c1f; --hole-line: #c9963a; --hole-text: #f0c87a; --lo: rgb(38,42,40); --hi: rgb(96,214,172);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface-0: #121211; --surface-1: #1a1a19; --surface-2: #242422; --line: #34332f;
+  --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #8f8e86; --empty: #262624; --a: #3987e5;
+  --subj: #5a9be8; --verb: #f0844f; --obj: #2cc28c;
+  --hole: #4a3c1f; --hole-line: #c9963a; --hole-text: #f0c87a; --lo: rgb(38,42,40); --hi: rgb(96,214,172);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: var(--surface-0); color: var(--text-primary);
+  font: 14px/1.55 -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", "Segoe UI", sans-serif;
+  display: grid; grid-template-rows: auto auto 1fr auto; overflow: hidden; }
+header { display: flex; gap: 8px; align-items: center; flex-wrap: nowrap; overflow-x: auto; white-space: nowrap; height: 48px; padding: 0 16px; background: var(--surface-1); border-bottom: 1px solid var(--line); }
+header h1 { font-size: 16px; margin: 0 10px 0 0; font-weight: 600; }
+.badge { font-size: 11.5px; color: var(--text-muted); border: 1px solid var(--line); border-radius: 10px; padding: 0 8px; }
+nav.steps { display: flex; gap: 4px; flex-wrap: nowrap; }
+button, input[type=range] { font: inherit; }
+button { color: var(--text-primary); background: var(--surface-1); border: 1px solid var(--line); border-radius: 6px; padding: 3px 9px; cursor: pointer; }
+button:hover:not(:disabled) { background: var(--surface-2); }
+button:disabled { opacity: .45; cursor: default; }
+button[aria-current="step"], button.on { border-color: var(--a); color: var(--a); }
+.intro { height: 92px; overflow-y: auto; padding: 10px 18px 6px; background: var(--surface-1); border-bottom: 1px solid var(--line); }   /* 高さを固定 (図の大きさを場面でそろえる) */
+.intro h2 { font-size: 17px; margin: 0 0 3px; font-weight: 600; }
+.intro p { margin: 0; color: var(--text-secondary); max-width: 1100px; }
+.tools { display: flex; gap: 8px; align-items: center; flex-wrap: nowrap; overflow-x: auto; white-space: nowrap; }
+.tools label { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; color: var(--text-secondary); }
+.tools input[type=range] { width: 150px; accent-color: var(--a); }
+.readout { font-size: 13px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+main { position: relative; min-height: 0; display: grid; grid-template-columns: 1fr 300px; background: var(--surface-1); }
+.stage { position: relative; min-width: 0; min-height: 0; }
+.stage > * { position: absolute; inset: 0; }
+svg#table { width: 100%; height: 100%; display: block; }
+svg#inset { left: 36%; width: 64%; height: 100%; display: none; border-left: 1px dashed var(--line); }
+body.tall svg#table { width: 36%; }
+.side { border-left: 1px solid var(--line); padding: 12px 14px; overflow-y: auto; font-size: 13px; color: var(--text-secondary); }
+.side h3 { font-size: 13px; margin: 4px 0 6px; color: var(--text-primary); }
+.side .big { font-size: 22px; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.side .big small { font-size: 13px; color: var(--text-secondary); margin-left: 3px; }
+.side .meter { height: 8px; background: var(--surface-2); border-radius: 4px; overflow: hidden; margin: 4px 0 2px; }
+.side .meter i { display: block; height: 100%; background: var(--obj); }
+.key { display: flex; gap: 6px; align-items: center; margin: 3px 0; }
+.key i { width: 14px; height: 14px; border-radius: 3px; display: inline-block; flex: none; }
+.ramp { height: 10px; border-radius: 3px; background: linear-gradient(90deg, var(--lo), var(--hi)); margin: 4px 0 1px; }
+.ramp-l { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); }
+.seg { display: inline-flex; } .seg button { border-radius: 0; margin-left: -1px; }
+.seg button:first-child { border-radius: 6px 0 0 6px; margin-left: 0; } .seg button:last-child { border-radius: 0 6px 6px 0; }
+#fieldWrap { display: none; }
+#fieldWrap canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+#tableWrap { display: none; overflow: auto; padding: 16px 24px; }
+#tableWrap table { border-collapse: separate; border-spacing: 4px; font-variant-numeric: tabular-nums; }
+#tableWrap th { font-weight: 500; font-size: 13px; padding: 0 6px; }
+#tableWrap th.row { text-align: right; white-space: nowrap; }
+#tableWrap td { width: 64px; height: 30px; text-align: center; border-radius: 5px; font-size: 13px; transition: background .5s; }
+#tableWrap td.hole { outline: 2px solid var(--hole-line); outline-offset: -2px; }
+#tableWrap tr.unseen th { color: var(--subj); font-weight: 700; }
+footer { display: grid; grid-template-columns: auto 1fr auto auto; gap: 14px; align-items: center; padding: 7px 12px; background: var(--surface-1); border-top: 1px solid var(--line); font-size: 13px; height: 52px; }   /* 1 行に固定 */
+footer .navg { display: flex; gap: 8px; align-items: center; }
+footer .tools { justify-content: flex-start; min-width: 0; }
+#page { min-width: 38px; text-align: center; font-variant-numeric: tabular-nums; }
+button.go { border-color: var(--a); background: var(--a); color: #fff; font-weight: 600; }
+button.go:hover:not(:disabled) { background: var(--a); filter: brightness(1.1); }
+#prev { min-width: 64px; } #next { min-width: 170px; }
+/* svg の中身 */
+.cell { transition: transform .9s ease, opacity .6s; }
+.rowg { transition: transform .9s ease, opacity .6s; }
+.lab { font-size: 3.2px; fill: var(--text-secondary); }
+.lab.subj { fill: var(--subj); } .lab.verb { fill: var(--verb); } .lab.obj { fill: var(--obj); }
+.val { font-size: 1.7px; text-anchor: middle; dominant-baseline: central; pointer-events: none; transition: opacity .5s; }
+.fade { transition: opacity .6s; }
+@media (prefers-reduced-motion: reduce) { .cell, .rowg, .fade, .val { transition: none; } }
+@media (max-width: 760px) { main { grid-template-columns: 1fr; grid-template-rows: 1fr auto; } .side { border-left: 0; border-top: 1px solid var(--line); max-height: 34vh; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>N-gram の展開：表から滑らかな関数へ</h1>
+  <nav class="steps" id="steps"></nav>
+  <span class="badge">説明用の値</span>
+</header>
+<section class="intro">
+  <h2 id="title"></h2>
+  <p id="prompt"></p>
+</section>
+<main>
+  <div class="stage" id="stage">
+    <svg id="table" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"></svg>
+    <svg id="inset" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"></svg>
+    <div id="fieldWrap"><canvas id="field"></canvas></div>
+    <div id="tableWrap"></div>
+  </div>
+  <aside class="side" id="side"></aside>
+</main>
+<footer><div class="navg"><button id="skipPrev" title="前の場面へ (段を飛ばす．Shift+←)">⏮</button><button id="prev">← 前</button><span id="page"></span><button id="next">次の場面 →</button><button id="skipNext" title="次の場面へ (段を飛ばす．Shift+→)">⏭</button></div><div class="tools" id="tools"></div><button id="themeBtn" title="明暗の切替">明暗</button></footer>
+<script>
+'use strict';
+(() => {
+const D = window.NGRAM_UNFOLD;
+if (!D) { document.body.innerHTML = '<p style="padding:20px">ngram-unfold-data.js がありません (python3 code/ngram_unfold.py で作る)．</p>'; return; }
+const V = D.vocab.length, R = D.rows.length, NO = D.obj.length;
+const $ = s => document.querySelector(s);
+const NS = 'http://www.w3.org/2000/svg';
+const el = (tag, attrs = {}, parent) => { const e = document.createElementNS(NS, tag); for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v); if (parent) parent.append(e); return e; };
+const lerp = (a, b, t) => a + (b - a) * t;
+const ease = t => t < .5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
+const motion = matchMedia('(prefers-reduced-motion: reduce)');
+// 明暗: 色の両端と文字の色を明暗で替える (明暗の切替は右下の button．OS の設定にも従う)
+let DK = false;
+const readTheme = () => { DK = getComputedStyle(document.documentElement).colorScheme === 'dark'; };
+readTheme();
+const RAMP = () => DK ? [[38, 42, 40], [96, 214, 172]] : [[242, 246, 237], [29, 107, 86]];
+const toneArr = v => { const [LO, HI] = RAMP(), t = Math.max(0, Math.min(1, v / D.colorMax)); return LO.map((a, i) => Math.round(a + (HI[i] - a) * t)); };
+const tone = v => `rgb(${toneArr(v).join(',')})`;
+const high = v => v / D.colorMax > .55;
+const ink = v => high(v) ? (DK ? '#0b0b0b' : '#fff') : (DK ? '#e8e8e4' : '#333');
+const cssv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const holeSet = new Set(D.holes.map(([i, j]) => i + ',' + j));
+const isHole = (i, j) => holeSet.has(i + ',' + j);
+const objCol = D.obj.map(o => D.vocab.indexOf(o));               // 目的語の列 (語彙の番号)
+const rowOfIndex = new Map(D.rowIndex.map((ri, i) => [ri, i]));    // 展開した行の番号 → 観測した行の番号
+
+// ---------------------------------------------------------------- 場面
+const stages = ['2-gram の表', '3-gram の配列', '1 列に展開', 'ほとんど空', '並べ替える', '座標に置く', '間隔を伸縮', '表に戻す', '点と矢印', '付録 積と softmax'];
+const titles = [
+  '2-gram は，直前の語と次の語の 2 次元の配列',
+  '3-gram は，直前の 2 語と次の語の 3 次元の配列',
+  '直前の 2 語を 1 列に並べると，2-gram と同じ 2 次元の表になる',
+  '展開した表は非常に長く，ほとんどが空',
+  '行と列を並べ替えると，観測された行が集まり傾向が見える',
+  '行と列に座標を当て，格子点の間をつなぐ',
+  '軸の間隔を伸び縮みさせると，滑らかな簡単な関数で近似できる',
+  '関数から読み直すと，穴にも，表に無い文脈にも値が入る',
+  '表の 1 行を，語の点と文脈の矢印の内積で書く',
+  '付録: 2 次関数で書くと，正規化で xy の項が残る'];
+const prompts = [
+  `語彙は ${V} 語 (主語・動詞・目的語)．p(y | w₁) の表は ${V} × ${V}．行と列は辞書順で，並べ替える前の順番です．色が濃いほど確率が高く，灰色は一度も出てこなかった組です．`,
+  `p(y | w₁, w₂) は ${V} × ${V} × ${V} の 3 次元の配列です．ここでは直前の 1 語目 w₁ ごとに ${V} × ${V} の面 (行 w₂，列 y) に切って並べました．`,
+  `面を w₁ の順に縦に積むと，${V * V} 行 × ${V} 列の縦長の表 (行 = 直前 2 語)．右は青い枠の拡大．`,
+  `${V * V} 行のうち，観測されたのは青い印の ${R} 行だけ．右の欄で N と語彙を変えると，行の数が一気に増える．`,
+  '行と列の順番だけを変える (数字は変わらない)．似たものを隣に置くと帯が見え，? も隣から見積もれる．',
+  '並べ替えた表の行 (文脈) を縦軸，列 (次の語) を横軸の等間隔の座標に置き，値を格子点の色にします．格子点の間を，格子点を必ず通る面でつなぐと，おおよそはつながりますが等高線はぐにゃぐにゃで，穴の値は当てになりません．',
+  '表のマス (上と左の帯) はそのままで，座標の目盛りだけを伸び縮みさせる (似たものは詰め，違うものは離す．順番は変えない)．同じ滑らかな簡単な関数 (exp(座標の 2 次式)) が，伸縮するほどよく当てはまる．文脈も語も 1 次元の座標にした特殊な例．',
+  '前の場面の関数 (exp(座標の 2 次式)) の値を格子点で読み直して表に戻した．穴だった所 (枠) にも値が入り，観測した値も少し変わる (平滑化)．表に行の無い kids heat も，座標を語から作れば (heat の座標 + kids のずれ) 同じ関数から読める．',
+  '文脈 x と語 y を同じ 2 次元の空間のベクトル 𝐱 (矢印)，𝐲 (点) で表し，p(y | x) = softmax ⟨𝐱, 𝐲⟩ とする．⟨𝐱, 𝐲⟩ は点を矢印の向きに射影した長さ × 矢印の長さ．矢印の先をドラッグすると右の確率が変わる．表に行の無い kids heat も，矢印 (heat + kids のずれ) があれば読める．これを高次元にしたものが LLM の出力層 (多クラスのロジスティック回帰)．',
+  `log p(y | x) を 2 次関数 α + βx + γy + δx² + εxy + ζy² で書き (x: 文脈の座標，y: 語の座標)，表の行ごと (y について) に和を 1 にすると，x だけの項は消え p(y | x) ∝ exp(εxy + γy + ζy²)．文脈と語を結ぶのは xy の項だけ．多次元にすると内積 ⟨𝐱, 𝐲⟩ になる．左: スコアは x の直線．右: 確率の曲線と観測した点 (誤差 ${D.softmax.rmse.toFixed(1)} %)．`];
+let step = 0;
+const QP = new URLSearchParams(location.search), clampS = n => Math.max(0, Math.min(stages.length - 1, n));
+const LO = clampS((+QP.get('from') || 1) - 1), HI = Math.max(LO, clampS((+QP.get('to') || stages.length) - 1));   // ?from=&to= で場面の範囲を限る (スライドのブロックごとに)
+const stepsNav = $('#steps');
+stages.forEach((s, i) => { const b = document.createElement('button'); b.textContent = `${i + 1} ${s}`; b.addEventListener('click', () => go(i)); if (i < LO || i > HI) b.style.display = 'none'; stepsNav.append(b); });
+
+// ---------------------------------------------------------------- 表 (svg): 場面 1〜5
+const svg = $('#table');
+const C = 4;                                   // 1 セルの大きさ (svg の単位)
+const root = el('g', { id: 'root' }, svg);
+// 2-gram
+const g2 = el('g', { class: 'fade' }, root);
+for (let a = 0; a < V; a++) for (let c = 0; c < V; c++) {
+  const v = D.big2[a][c];
+  el('rect', { x: c * C + .15, y: a * C + .15, width: C - .3, height: C - .3, rx: .4, 'data-v': v }, g2);
+  if (v > 0) { const t = el('text', { x: c * C + C / 2, y: a * C + C / 2, class: 'val', 'data-tv': v, style: 'font-size:1.5px' }, g2); t.textContent = v; }
+}
+D.vocab.forEach((w, k) => {
+  const t1 = el('text', { x: -.8, y: k * C + C / 2 + 1.1, class: 'lab ' + D.cat[k], 'text-anchor': 'end' }, g2); t1.textContent = w;
+  const t2 = el('text', { x: k * C + C / 2, y: -1, class: 'lab ' + D.cat[k], transform: `rotate(-60 ${k * C + C / 2} -1)` }, g2); t2.textContent = w;
+});
+{ const t = el('text', { x: V * C / 2, y: V * C + 5, class: 'lab', 'text-anchor': 'middle', style: 'font-size:3.4px;fill:var(--text-primary)' }, g2); t.textContent = '行: 直前の語 w₁　列: 次の語 y'; }
+
+// 3-gram の 169 行 (行ごとの g と，その中の 13 セル)．場面 2 は面に，場面 3〜4 は横長 (列 = 文脈) に，拡大した表は縦 (行 = 文脈) に置く
+const g3 = el('g', { class: 'fade', id: 'g3' }, root);
+const rowsG = [];
+for (let a = 0; a < V; a++) for (let b = 0; b < V; b++) {
+  const ri = a * V + b, oi = rowOfIndex.get(ri);
+  const g = el('g', { class: 'rowg' }, g3);
+  const cells = [];
+  for (let c = 0; c < V; c++) {
+    let v = 0, hole = false, isObj = false;
+    if (oi !== undefined) { const j = objCol.indexOf(c); if (j >= 0) { isObj = true; v = D.values[oi][j]; hole = isHole(oi, j); } }
+    const r = el('rect', { class: 'cell', x: .1, y: .1, width: C - .2, height: C - .2, rx: .3, 'data-v': v, ...(hole ? { 'data-hole': 1 } : {}) }, g);
+    let t = null;
+    if (isObj) {
+      t = el('text', { class: 'val', x: C / 2, y: C / 2, 'data-tv': v, ...(hole ? { 'data-hole': 1 } : {}), opacity: 0 }, g);
+      t.textContent = hole ? '?' : v;
+    }
+    cells.push({ r, t, c });
+  }
+  const lab = el('text', { class: 'lab rowlab', 'text-anchor': 'end', style: 'font-size:2.3px' }, g);
+  lab.textContent = `${D.vocab[a]} ${D.vocab[b]}`;
+  rowsG.push({ g, a, b, ri, oi, cells, lab });
+}
+// 面の名前 (場面 2)，縦長の表の w₁ の区切り (場面 3, 4)．行 = 文脈 (直前の語の並び)，列 = 次の語 にそろえる
+const sliceLabels = el('g', { class: 'fade' }, root);
+const stackLabels = el('g', { class: 'fade' }, root);
+const SW = V * C + 6, COLS2 = 7;                              // 場面 2 は 7 枚ずつ 2 段
+const slicePos = a => [(a % COLS2) * SW, Math.floor(a / COLS2) * (V * C + 14)];
+D.vocab.forEach((w, a) => {
+  const [x, y] = slicePos(a);
+  const t = el('text', { x: x + V * C / 2, y: y - 2, class: 'lab ' + D.cat[a], 'text-anchor': 'middle', style: 'font-size:4.6px' }, sliceLabels); t.textContent = `w₁ = ${w}`;
+  const t2 = el('text', { x: -2, y: a * V * C + V * C / 2 + 2, class: 'lab ' + D.cat[a], 'text-anchor': 'end', style: 'font-size:6.5px' }, stackLabels); t2.textContent = `${w} ＊`;
+  el('line', { x1: -2, x2: V * C + 2, y1: a * V * C, y2: a * V * C, stroke: 'var(--text-muted)', 'stroke-width': .4 }, stackLabels);
+});
+{ const t = el('text', { x: V * C + 6, y: 8, class: 'lab', style: 'font-size:6px;fill:var(--text-primary)' }, stackLabels);
+  t.innerHTML = `<tspan x="${V * C + 6}" dy="0">行: 直前の 2 語 (w₁, w₂)</tspan><tspan x="${V * C + 6}" dy="8">${V * V} 行</tspan><tspan x="${V * C + 6}" dy="8">列: 次の語 y</tspan><tspan x="${V * C + 6}" dy="8">${V} 列</tspan><tspan x="${V * C + 6}" dy="12">w₁ ごとに ${V} 行ずつ</tspan>`; }
+const sliceNote = el('text', { x: 0, y: 2 * (V * C + 14) + 4, class: 'lab', style: 'font-size:4.4px;fill:var(--text-secondary)' }, sliceLabels);
+sliceNote.textContent = `各面: 行 = w₂ (直前の語)，列 = y (次の語)．面は ${V} 枚 → ${V} × ${V} × ${V} = ${V ** 3} セル．面を縦に積むと行 = (w₁, w₂) になる`;
+// 拡大の窓 (場面 3, 4 の右側) の列の見出しと，窓の上の行を隠す地
+const yLabels = el('g', { class: 'ylabs' }, root);
+el('rect', { x: -60, y: -800, width: V * C + 120, height: 799.4, fill: 'var(--surface-1)' }, yLabels);
+const winBottom = el('rect', { x: -60, y: 0, width: V * C + 120, height: 800, fill: 'var(--surface-1)' }, yLabels);
+const yLabelEls = D.vocab.map((w, c) => { const t = el('text', { class: 'lab ' + D.cat[c], style: 'font-size:2.4px' }, yLabels); t.textContent = w; return t; });
+const winBox = el('rect', { fill: 'none', stroke: 'var(--a)', 'stroke-width': 1, rx: 1, class: 'fade' }, root);
+// 並べ替えた後の列の見出し
+const colLabels = el('g', { class: 'fade' }, root);
+const colOrderAll = [...D.colOrder.map(j => objCol[j]), ...[...Array(V).keys()].filter(c => !objCol.includes(c))];
+colOrderAll.forEach((c, p) => { const t = el('text', { x: p * C + C / 2, y: -1, class: 'lab ' + D.cat[c], transform: `rotate(-60 ${p * C + C / 2} -1)`, style: 'font-size:2.4px' }, colLabels); t.textContent = D.vocab[c]; });
+
+// 観測された行の印 (場面 4)
+const obsMarks = el('g', { class: 'fade' }, root);
+D.rowIndex.forEach(ri => el('rect', { x: V * C + .5, y: ri * C + .2, width: 2.2, height: C - .4, fill: 'var(--a)' }, obsMarks));
+{ const t = el('text', { x: V * C + 6, y: 120, class: 'lab', style: 'font-size:6px;fill:var(--a)' }, obsMarks);
+  t.innerHTML = `<tspan x="${V * C + 6}" dy="0">青い印 = 観測された行</tspan><tspan x="${V * C + 6}" dy="8">${D.rows.length} 行だけ</tspan>`; }
+// 並べ替えた後の文脈の順: 観測した行を座標の順に，そのあと残りを元の順に
+const sortedRank = new Map();
+D.rowOrder.forEach((oi, p) => sortedRank.set(D.rowIndex[oi], p));
+let k0 = R; for (let ri = 0; ri < V * V; ri++) if (!sortedRank.has(ri)) sortedRank.set(ri, k0++);
+const WIN = { a0: 4 * V, n: 2 * V };                            // 拡大の窓: w₁ = I と kids (元の順)
+// 並べ替えた区画の帯 (場面 5 の拡大)
+const bandG = el('g', { class: 'fade' }, root);
+{ const pos = v => D.rowOrder.map((i, p) => [i, p]).filter(([i]) => D.rows[i][1] === v).map(([, p]) => p);
+  const band = (ps, c0, c1, txt) => { const r0 = Math.min(...ps), r1 = Math.max(...ps) + 1;
+    el('rect', { x: c0 * C, y: r0 * C, width: (c1 - c0) * C, height: (r1 - r0) * C, fill: 'none', stroke: 'var(--a)', 'stroke-width': .5, rx: .4 }, bandG);
+    const t = el('text', { x: NO * C + 1.5, y: (r0 + r1) / 2 * C + .8, class: 'lab', style: 'font-size:2.3px;fill:var(--a)' }, bandG); t.textContent = txt; };
+  band([...pos('pour'), ...pos('spill')], 0, 2, '液体: pour, spill → water, soup');
+  band(pos('heat'), 1, 4, 'heat → bread (間)');
+  band([...pos('cut'), ...pos('fold')], 3, 5, '固体: cut, fold → metal, paper'); }
+
+function layoutTable(s, sortedPhase = 0) {
+  const tall = s === 2 || s === 3 || (s === 4 && sortedPhase < 2);   // 縦長の表の全体と拡大の窓
+  const sorted = s === 4 && sortedPhase > 0;
+  g2.style.opacity = s === 0 ? 1 : 0;
+  g3.style.opacity = s >= 1 && s <= 4 ? 1 : 0;
+  sliceLabels.style.opacity = s === 1 ? 1 : 0;
+  stackLabels.style.opacity = tall && !sorted ? 'var(--mainop, 1)' : 0;
+  colLabels.style.opacity = s === 4 && sortedPhase === 2 ? 1 : 0;
+  bandG.style.opacity = s === 4 && sortedPhase === 2 ? 1 : 0;
+  obsMarks.style.opacity = s === 3 ? 1 : 0;
+  winBox.style.opacity = tall ? 'var(--mainop, 1)' : 0;
+  const w0 = sorted ? 0 : WIN.a0, wn = sorted ? R : WIN.n;
+  winBox.setAttribute('x', -.8); winBox.setAttribute('y', w0 * C - .8); winBox.setAttribute('width', V * C + 1.6); winBox.setAttribute('height', wn * C + 1.6);
+  yLabels.setAttribute('transform', `translate(0 ${w0 * C})`);
+  winBottom.setAttribute('y', wn * C + .6);
+  yLabelEls.forEach((t, c) => { const x = (sorted ? colOrderAll.indexOf(c) : c) * C + C / 2; t.setAttribute('x', x); t.setAttribute('y', -1); t.setAttribute('transform', `rotate(-60 ${x} -1)`); });
+  for (const R_ of rowsG) {
+    const obs = R_.oi !== undefined, pos = sorted ? sortedRank.get(R_.ri) : R_.ri;
+    let gx = 0, gy = pos * C;
+    if (s <= 1) { const [sx, sy] = slicePos(R_.a); gx = sx; gy = sy + R_.b * C; }
+    R_.g.style.transform = `translate(${gx}px, ${gy}px)`;
+    R_.g.style.opacity = s === 3 && !obs ? .5 : s === 4 && sortedPhase === 2 && !obs ? 0 : 1;
+    for (const c of R_.cells) {
+      const cp = sorted ? colOrderAll.indexOf(c.c) : c.c;
+      c.r.style.transform = `translate(${cp * C}px, 0px)`;
+      if (c.t) { c.t.style.transform = `translate(${cp * C}px, 0px)`; c.t.setAttribute('opacity', s === 4 && sortedPhase === 2 ? 1 : 0); }
+    }
+    // 文脈の名前は行の左に．縦長の全体では拡大の窓でだけ見える
+    R_.lab.setAttribute('x', -.8); R_.lab.setAttribute('y', C / 2 + .7);
+    R_.lab.style.opacity = tall ? 'var(--labop, 0)' : s === 4 && sortedPhase === 2 && obs ? 1 : 0;
+  }
+  yLabels.style.opacity = 'var(--labop, 0)';
+  // 拡大の窓
+  inset.style.display = tall ? 'block' : 'none';
+  if (tall) inset.setAttribute('viewBox', [-14, w0 * C - 12, V * C + 18, wn * C + 14].join(' '));
+}
+const inset = $('#inset');
+{ const u = el('use', { href: '#root' }, inset); u.setAttribute('style', '--labop:1;--mainop:0'); }
+// viewBox を滑らかに動かす
+let vb = [0, 0, 100, 100], vbAnim = 0;
+function setView(target, ms = 900) {
+  const from = vb.slice(), id = ++vbAnim, t0 = performance.now();
+  if (motion.matches || ms === 0) { vb = target; svg.setAttribute('viewBox', vb.join(' ')); return; }
+  const tick = now => { if (id !== vbAnim) return; const t = Math.min(1, (now - t0) / ms), e = ease(t);
+    vb = from.map((a, i) => lerp(a, target[i], e)); svg.setAttribute('viewBox', vb.join(' ')); if (t < 1) requestAnimationFrame(tick); };
+  requestAnimationFrame(tick);
+}
+const TALLV = [-40, -6, V * C + 130, V * V * C + 12];
+const VIEWS = {
+  0: [-20, -18, V * C + 40, V * C + 30],
+  1: [-6, -10, COLS2 * SW + 6, 2 * (V * C + 14) + 12],
+  2: TALLV, 3: TALLV, 4: TALLV,
+  zoom: [-14, -12, V * C + 18, R * C + 16],
+};
+
+// ---------------------------------------------------------------- 座標と関数 (canvas): 場面 6, 7
+const uniform = n => [...Array(n).keys()].map(k => .06 + .88 * k / (n - 1));
+function coords(lam) {
+  const ur = uniform(R), uc = uniform(NO), xr = new Array(R), xc = new Array(NO);
+  D.rowOrder.forEach((i, p) => { xr[i] = lerp(ur[p], D.warpRows[i], lam); });
+  D.colOrder.forEach((j, p) => { xc[j] = lerp(uc[p], D.warpCols[j], lam); });
+  return { xr, xc };
+}
+const design = (x, y) => [1, x, y, x * x, x * y, y * y];
+function solve(A, b) {          // ガウスの消去法 (小さな行列)
+  const n = b.length, M = A.map((r, i) => [...r, b[i]]);
+  for (let i = 0; i < n; i++) {
+    let m = i; for (let j = i + 1; j < n; j++) if (Math.abs(M[j][i]) > Math.abs(M[m][i])) m = j;
+    [M[i], M[m]] = [M[m], M[i]];
+    for (let j = 0; j < n; j++) if (j !== i && M[j][i]) { const f = M[j][i] / M[i][i]; for (let l = i; l <= n; l++) M[j][l] -= f * M[i][l]; }
+  }
+  return M.map((r, i) => r[n] / r[i]);
+}
+function observed(lam) {
+  const { xr, xc } = coords(lam), pts = [];
+  for (let i = 0; i < R; i++) for (let j = 0; j < NO; j++) if (!isHole(i, j)) pts.push({ x: xc[j], y: xr[i], v: D.values[i][j] });
+  return pts;
+}
+// p ≈ exp(2 次式)．p の誤差の二乗和を Gauss-Newton で最小に (初期値は log(p + 0.5) の最小二乗)
+function fit(lam) {
+  const pts = observed(lam), A = pts.map(p => design(p.x, p.y)), z = pts.map(p => p.v), m = 6;
+  const normal = (rows, rhs) => { const G = [...Array(m)].map(() => new Array(m).fill(0)), h = new Array(m).fill(0);
+    rows.forEach((r, k) => { for (let a = 0; a < m; a++) { h[a] += r[a] * rhs[k]; for (let b = 0; b < m; b++) G[a][b] += r[a] * r[b]; } });
+    for (let a = 0; a < m; a++) G[a][a] += 1e-6; return solve(G, h); };
+  let beta = normal(A, z.map(v => Math.log(v + .5)));
+  for (let it = 0; it < 40; it++) {
+    const f = A.map(r => Math.exp(r.reduce((s, a, k) => s + a * beta[k], 0)));
+    const J = A.map((r, k) => r.map(a => a * f[k]));
+    const d = normal(J, z.map((v, k) => v - f[k]));
+    beta = beta.map((b, k) => b + d[k]);
+  }
+  const f = A.map(r => Math.exp(r.reduce((s, a, k) => s + a * beta[k], 0)));
+  const rmse = Math.sqrt(f.reduce((s, v, k) => s + (v - z[k]) ** 2, 0) / f.length);
+  return { fn: (x, y) => Math.exp(design(x, y).reduce((s, a, k) => s + a * beta[k], 0)), rmse };
+}
+// 薄板スプライン: 格子点を必ず通る
+function tps(pts) {
+  const n = pts.length, N = n + 3, k = r => r < 1e-12 ? 0 : r * r * Math.log(r);
+  const A = [...Array(N)].map(() => new Array(N).fill(0)), b = new Array(N).fill(0);
+  pts.forEach((p, i) => { pts.forEach((o, j) => { A[i][j] = k(Math.hypot(p.x - o.x, p.y - o.y)); });
+    A[i][n] = A[n][i] = 1; A[i][n + 1] = A[n + 1][i] = p.x; A[i][n + 2] = A[n + 2][i] = p.y; b[i] = p.v; });
+  const w = solve(A, b);
+  return (x, y) => { let s = w[n] + w[n + 1] * x + w[n + 2] * y; for (let i = 0; i < n; i++) s += w[i] * k(Math.hypot(x - pts[i].x, y - pts[i].y)); return s; };
+}
+const canvas = $('#field'), ctx = canvas.getContext('2d');
+let lam = 0, mode = 'interp', fieldCache = { key: '' };
+function drawField() {
+  const W = canvas.clientWidth, H = canvas.clientHeight, dpr = Math.min(2, devicePixelRatio || 1);
+  if (!W || !H) return;
+  canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const css = getComputedStyle(document.documentElement);
+  const left = Math.min(190, W * .22), top = 78, size = Math.max(200, Math.min(W - left - 30, H - top - 30));
+  const PX = x => left + x * size, PY = y => top + y * size;
+  ctx.clearRect(0, 0, W, H);
+  const { xr, xc } = coords(lam);
+  const key = lam + '|' + mode;
+  if (fieldCache.key !== key) {
+    const fn = mode === 'interp' ? tps(observed(lam)) : fit(lam).fn;
+    const G = 96, f = new Float64Array((G + 1) * (G + 1));
+    for (let j = 0; j <= G; j++) for (let i = 0; i <= G; i++) f[j * (G + 1) + i] = fn(i / G, j / G);
+    fieldCache = { key, fn, f, G };
+  }
+  const { f, G, fn } = fieldCache;
+  const img = ctx.createImageData(G, G);
+  for (let j = 0; j < G; j++) for (let i = 0; i < G; i++) { const v = (f[j * (G + 1) + i] + f[j * (G + 1) + i + 1] + f[(j + 1) * (G + 1) + i] + f[(j + 1) * (G + 1) + i + 1]) / 4;
+    const rgb = toneArr(v), o = (j * G + i) * 4, bg = DK ? 26 : 255; for (let c = 0; c < 3; c++) img.data[o + c] = Math.round(rgb[c] * .62 + bg * .38); img.data[o + 3] = 255; }
+  const off = document.createElement('canvas'); off.width = off.height = G; off.getContext('2d').putImageData(img, 0, 0);
+  ctx.imageSmoothingEnabled = true; ctx.drawImage(off, PX(0), PY(0), size, size);
+  // 格子の線
+  ctx.strokeStyle = DK ? 'rgba(0,0,0,.45)' : 'rgba(255,255,255,.75)'; ctx.lineWidth = 1;
+  xc.forEach(x => { ctx.beginPath(); ctx.moveTo(PX(x), PY(0)); ctx.lineTo(PX(x), PY(1)); ctx.stroke(); });
+  xr.forEach(y => { ctx.beginPath(); ctx.moveTo(PX(0), PY(y)); ctx.lineTo(PX(1), PY(y)); ctx.stroke(); });
+  // 等高線 (marching squares)
+  const sx = size / G, sy = size / G;
+  for (const L of [3, 8, 15, 25, 35]) {
+    ctx.strokeStyle = DK ? `rgba(225,240,232,${.3 + .4 * L / D.colorMax})` : `rgba(23,59,58,${.35 + .4 * L / D.colorMax})`; ctx.lineWidth = 1.2; ctx.beginPath();
+    for (let j = 0; j < G; j++) for (let i = 0; i < G; i++) {
+      const a = f[j * (G + 1) + i], b = f[j * (G + 1) + i + 1], c = f[(j + 1) * (G + 1) + i + 1], d = f[(j + 1) * (G + 1) + i];
+      const e = [], cut = (p, q, P, Q) => { if ((p < L) !== (q < L)) { const t = (L - p) / (q - p); e.push([PX(0) + (P[0] + (Q[0] - P[0]) * t) * sx, PY(0) + (P[1] + (Q[1] - P[1]) * t) * sy]); } };
+      cut(a, b, [i, j], [i + 1, j]); cut(b, c, [i + 1, j], [i + 1, j + 1]); cut(d, c, [i, j + 1], [i + 1, j + 1]); cut(a, d, [i, j], [i, j + 1]);
+      for (let k = 0; k + 1 < e.length; k += 2) { ctx.moveTo(...e[k]); ctx.lineTo(...e[k + 1]); }
+    }
+    ctx.stroke();
+  }
+  ctx.strokeStyle = css.getPropertyValue('--line'); ctx.strokeRect(PX(0), PY(0), size, size);
+  // 表のマス (固定) と座標の目盛りを結ぶ: 上 = 列 (次の語)，左 = 行 (文脈)．マスの大きさは変わらず，目盛りだけが伸び縮みする
+  { const uc = uniform(NO), ur = uniform(R), cw = size / NO * .8, rh = size / R * .8, yT = 26, xL = PX(0) - 46;
+    ctx.lineWidth = 1;
+    D.colOrder.forEach((j, p) => { const cx = PX(uc[p]);
+      ctx.fillStyle = cssv('--empty'); ctx.strokeStyle = cssv('--line'); ctx.fillRect(cx - cw / 2, yT, cw, 16); ctx.strokeRect(cx - cw / 2, yT, cw, 16);
+      ctx.strokeStyle = cssv('--a'); ctx.globalAlpha = .55; ctx.beginPath(); ctx.moveTo(cx, yT + 16); ctx.lineTo(PX(xc[j]), PY(0)); ctx.stroke(); ctx.globalAlpha = 1; });
+    D.rowOrder.forEach((i, p) => { const cy = PY(ur[p]);
+      ctx.fillStyle = cssv('--empty'); ctx.strokeStyle = cssv('--line'); ctx.fillRect(xL, cy - rh / 2, 14, rh); ctx.strokeRect(xL, cy - rh / 2, 14, rh);
+      ctx.strokeStyle = cssv('--a'); ctx.globalAlpha = .55; ctx.beginPath(); ctx.moveTo(xL + 14, cy); ctx.lineTo(PX(0), PY(xr[i])); ctx.stroke(); ctx.globalAlpha = 1; });
+    ctx.font = '11px -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif'; ctx.fillStyle = cssv('--text-muted'); ctx.textAlign = 'left';
+    ctx.fillText('表の列 (マスは固定)', PX(0), yT - 6); }
+  // 格子点
+  const rad = Math.max(8, Math.min(13, size / 46));
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (let i = 0; i < R; i++) for (let j = 0; j < NO; j++) {
+    const x = PX(xc[j]), y = PY(xr[i]), h = isHole(i, j), v = D.values[i][j];
+    ctx.beginPath(); ctx.arc(x, y, rad, 0, 2 * Math.PI);
+    if (h) { ctx.fillStyle = cssv('--hole'); ctx.fill(); ctx.strokeStyle = cssv('--hole-line'); ctx.lineWidth = 1.4; ctx.stroke(); }
+    else { ctx.fillStyle = tone(v); ctx.fill(); ctx.strokeStyle = DK ? '#1a1a19' : '#fff'; ctx.lineWidth = 1; ctx.stroke(); }
+    ctx.font = `${Math.round(rad * .95)}px -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif`;
+    ctx.fillStyle = h ? cssv('--hole-text') : ink(v);
+    ctx.fillText(h ? (mode === 'fit' && step === 6 ? fn(xc[j], xr[i]).toFixed(0) : '?') : String(v), x, y + .5);
+  }
+  // 見出し
+  ctx.font = '13px -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif';
+  ctx.fillStyle = css.getPropertyValue('--obj');
+  D.colOrder.forEach((j, p) => ctx.fillText(D.obj[j], PX(uniform(NO)[p]), 26 + 8));
+  ctx.textAlign = 'right'; ctx.fillStyle = css.getPropertyValue('--text-secondary');
+  const shown = new Set([D.rowOrder[0], D.rowOrder.at(-1)]); D.rows.forEach((r, i) => { if (r[0] === 'I') shown.add(i); });
+  ctx.font = '12px -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif';
+  { const ur = uniform(R); D.rowOrder.forEach((i, p) => { if (shown.has(i)) ctx.fillText(D.rows[i].join(' '), PX(0) - 52, PY(ur[p])); }); }
+  ctx.textAlign = 'left'; ctx.fillStyle = css.getPropertyValue('--text-muted');
+  ctx.fillText('横: 次の語 y の座標　縦: 文脈 x (直前 2 語) の座標', PX(0), PY(1) + 18);
+}
+
+// ---------------------------------------------------------------- 内積と softmax: 場面 8
+const SM = D.softmax, TW = D.warpCols;
+const WCOL = { water: '#2a78d6', soup: '#1baf7a', bread: '#c9971a', metal: '#eb6834', paper: '#8a5cc2' };
+const scores = x => TW.map(t => SM.theta * x * t + SM.c * t + SM.f * t * t);
+const smProbs = x => { const s = scores(x), m = Math.max(...s), e = s.map(v => Math.exp(v - m)), z = e.reduce((a, b) => a + b, 0); return e.map(v => D.mass * v / z); };
+let smX = D.unseenWarp;
+const smMarks = () => [...D.rows.map((r, i) => [r.join(' '), D.warpRows[i]]).filter(([n]) => n.startsWith('I ')), [D.unseen.join(' '), D.unseenWarp]];
+function drawSoftmax() {
+  const W = canvas.clientWidth, H = canvas.clientHeight, dpr = Math.min(2, devicePixelRatio || 1);
+  if (!W || !H) return;
+  canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const css = getComputedStyle(document.documentElement), txt = css.getPropertyValue('--text-secondary'), line = css.getPropertyValue('--line');
+  ctx.clearRect(0, 0, W, H);
+  const font = n => `${n}px -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif`;
+  const pw = (W - 120) / 2, ph = H - 90, top = 44;
+  const panels = [{ x0: 50, title: '語 y ごとのスコア εxy + γy + ζy² (x の直線)', f: scores, lo: Math.min(...scores(0), ...scores(1)) - .5, hi: Math.max(...scores(0), ...scores(1)) + .5 },
+                  { x0: 90 + pw, title: 'softmax で確率に p(y | x) (%)', f: smProbs, lo: -1, hi: 50 }];
+  for (const P of panels) {
+    const X = x => P.x0 + x * pw, Y = v => top + (1 - (v - P.lo) / (P.hi - P.lo)) * ph;
+    ctx.strokeStyle = line; ctx.lineWidth = 1; ctx.strokeRect(P.x0, top, pw, ph);
+    ctx.fillStyle = txt; ctx.font = font(13); ctx.textAlign = 'left'; ctx.fillText(P.title, P.x0, top - 12);
+    // 文脈の位置
+    D.warpRows.forEach(x => { ctx.strokeStyle = line; ctx.beginPath(); ctx.moveTo(X(x), top); ctx.lineTo(X(x), top + ph); ctx.stroke(); });
+    ctx.strokeStyle = '#2a78d6'; ctx.setLineDash([5, 4]); ctx.beginPath(); ctx.moveTo(X(smX), top); ctx.lineTo(X(smX), top + ph); ctx.stroke(); ctx.setLineDash([]);
+    D.obj.forEach((o, j) => {
+      ctx.strokeStyle = WCOL[o]; ctx.lineWidth = 2.2; ctx.beginPath();
+      for (let k = 0; k <= 200; k++) { const x = k / 200, v = P.f(x)[j]; k ? ctx.lineTo(X(x), Y(v)) : ctx.moveTo(X(x), Y(v)); }
+      ctx.stroke();
+      if (P.f === smProbs) {
+        D.rows.forEach((r, i) => { if (isHole(i, j)) return; ctx.fillStyle = WCOL[o]; ctx.beginPath(); ctx.arc(X(D.warpRows[i]), Y(D.values[i][j]), 3.2, 0, 2 * Math.PI); ctx.fill(); });
+      }
+      const v = P.f(smX)[j];
+      ctx.fillStyle = '#fff'; ctx.strokeStyle = WCOL[o]; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(X(smX), Y(v), 5, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
+      if (P.f === scores) { ctx.fillStyle = WCOL[o]; ctx.font = font(12); ctx.fillText(o, X(1) + 4, Y(P.f(1)[j]) + 4); }
+    });
+    ctx.fillStyle = txt; ctx.font = font(12); ctx.textAlign = 'center'; ctx.fillText('文脈の座標 x', P.x0 + pw / 2, top + ph + 22);
+  }
+}
+const smSide = () => { const p = smProbs(smX), mk = smMarks().find(([, x]) => Math.abs(x - smX) < 1e-3);
+  return `<h3>x = ${smX.toFixed(2)}${mk ? ` (${mk[0]})` : ''} での確率</h3>` +
+    D.obj.map((o, j) => `<div class="key" style="justify-content:space-between"><span><i style="background:${WCOL[o]}"></i> ${o}</span><span class="readout">${p[j].toFixed(1)} %</span></div><div class="meter"><i style="width:${p[j] / D.mass * 100}%;background:${WCOL[o]}"></i></div>`).join('') +
+    `<h3 style="margin-top:12px">式</h3><p>log p(y | x) を 2 次関数 α + βx + γy + δx² + εxy + ζy² とすると (x: 文脈の座標，y: 語の座標)，y について正規化したとき x だけの項 α + βx + δx² は消える:</p>
+    <p>p(y | x) = exp(εxy + γy + ζy²) / Σ<sub>y′</sub> exp(εxy′ + γy′ + ζy′²)</p>
+    <p>ε = ${SM.theta.toFixed(1)}．文脈と語を結ぶのは xy の項だけ (γy + ζy² は語ごとの項)．多次元にすると，文脈と語のベクトルの内積 ⟨𝐱, 𝐲⟩ になる (→ 場面 9)．</p>
+    <p class="readout">○ は縦の破線の文脈で読んだ値．kids heat は表に無い文脈．</p>`; };
+
+// ---------------------------------------------------------------- 表に戻す: 場面 9
+function renderBackTable(showFn) {
+  const { fn } = fit(1), { xr, xc } = coords(1);
+  const seq = D.rowOrder.map(i => ({ i }));
+  const pos = seq.findIndex(o => D.warpRows[o.i] > D.unseenWarp);
+  seq.splice(pos, 0, { unseen: true });
+  let h = '<table><tr><th></th>' + D.colOrder.map(j => `<th style="color:var(--obj)">${D.obj[j]}</th>`).join('') + '</tr>';
+  for (const o of seq) {
+    const name = o.unseen ? D.unseen.join(' ') : D.rows[o.i].join(' ');
+    h += `<tr class="${o.unseen ? 'unseen' : ''}"><th class="row">${name}</th>`;
+    for (const j of D.colOrder) {
+      const hole = o.unseen || isHole(o.i, j);
+      let v = null;
+      if (showFn) v = fn(xc[j], o.unseen ? D.unseenWarp : xr[o.i]);
+      else if (!hole) v = D.values[o.i][j];
+      const bg = v == null ? 'var(--hole)' : tone(v), col = v == null ? 'var(--hole-text)' : ink(v);
+      h += `<td class="${hole && showFn ? 'hole' : ''}" style="background:${bg};color:${col}">${v == null ? '?' : showFn ? v.toFixed(1) : v}</td>`;
+    }
+    h += '</tr>';
+  }
+  $('#tableWrap').innerHTML = h + '</table>';
+}
+
+// ---------------------------------------------------------------- 点と矢印 (バイプロット): 場面 10
+const BP = D.biplot, BE = BP.e;
+const bpCtx = Object.keys(BP.h);                       // "she heat" など 15 個 (kids heat は表に無い)
+let bpSel = 'she heat', bpH = BP.h[bpSel].slice(), bpDrag = false, bpGeom = null;
+const obsRow = name => D.rows.findIndex(r => r.join(' ') === name);
+const bpProbs = h => { const z = BE.map(e => e[0] * h[0] + e[1] * h[1]), m = Math.max(...z), ex = z.map(v => Math.exp(v - m)), t = ex.reduce((a, b) => a + b, 0); return ex.map(v => D.mass * v / t); };
+function bpSet(name) { bpSel = name; bpH = BP.h[name].slice(); }
+function drawBiplot() {
+  const W = canvas.clientWidth, H = canvas.clientHeight, dpr = Math.min(2, devicePixelRatio || 1);
+  if (!W || !H) return;
+  canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  const font = n => `${n}px -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif`;
+  const Lm = Math.max(...BE.flat().map(Math.abs)) * 1.25, S = Math.min(W * .6, H - 40) / (2 * Lm), cx = W * .36, cy = H / 2 + 6;
+  const P = ([x, y]) => [cx + x * S, cy - y * S];
+  const Ld = Math.max(...BE.flat().map(Math.abs)) * .9;          // 矢印は向きだけ (長さは選んだ矢印の長さに合わせて表示)
+  const nrm = h => Math.hypot(h[0], h[1]), k0 = Ld / nrm(BP.h[bpSel]);
+  bpGeom = { P, S, cx, cy, k0 };
+  const line = cssv('--line'), muted = cssv('--text-muted');
+  // ほかの文脈の矢印 (向きだけ，薄く)
+  for (const nm of bpCtx) { if (nm === bpSel) continue; const h = BP.h[nm], d = Ld / nrm(h), [x, y] = P([h[0] * d, h[1] * d]);
+    ctx.strokeStyle = nm === 'kids heat' ? cssv('--a') : line; ctx.setLineDash(nm === 'kids heat' ? [5, 4] : []); ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(x, y); ctx.stroke(); ctx.setLineDash([]); }
+  // 選んだ矢印の向きの直線と射影
+  const h = bpH, u = [h[0] / nrm(h), h[1] / nrm(h)];
+  ctx.strokeStyle = '#d62728'; ctx.globalAlpha = .35; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(...P([-u[0] * Lm, -u[1] * Lm])); ctx.lineTo(...P([u[0] * Lm, u[1] * Lm])); ctx.stroke(); ctx.globalAlpha = 1;
+  D.obj.forEach((o, j) => { const e = BE[j], d = e[0] * u[0] + e[1] * u[1], pr = [d * u[0], d * u[1]];
+    ctx.strokeStyle = WCOL[o]; ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.moveTo(...P(e)); ctx.lineTo(...P(pr)); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = WCOL[o]; ctx.beginPath(); ctx.arc(...P(pr), 3, 0, 2 * Math.PI); ctx.fill(); });
+  // 選んだ矢印 (ドラッグできる)
+  const tip = P([h[0] * k0, h[1] * k0]);
+  ctx.strokeStyle = '#d62728'; ctx.fillStyle = '#d62728'; ctx.lineWidth = 3; ctx.setLineDash(bpSel === 'kids heat' ? [7, 4] : []);
+  ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(...tip); ctx.stroke(); ctx.setLineDash([]);
+  ctx.beginPath(); ctx.arc(...tip, 7, 0, 2 * Math.PI); ctx.fill();
+  ctx.font = font(14); ctx.textAlign = 'left'; ctx.fillText(bpSel + (bpSel === 'kids heat' ? ' (表に無い)' : ''), tip[0] + 10, tip[1] - 8);
+  // 語の点
+  D.obj.forEach((o, j) => { const [x, y] = P(BE[j]); ctx.fillStyle = WCOL[o]; ctx.strokeStyle = DK ? '#1a1a19' : '#fff'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(x, y, 9, 0, 2 * Math.PI); ctx.fill(); ctx.stroke(); ctx.font = 'bold ' + font(14); ctx.textAlign = 'center'; ctx.fillText(o, x, y - 15); });
+  ctx.fillStyle = cssv('--text-primary'); ctx.beginPath(); ctx.arc(cx, cy, 2.5, 0, 2 * Math.PI); ctx.fill();
+  // 右: 確率の棒 (表の値と並べる)
+  const pm = bpProbs(h), oi = obsRow(bpSel), bx0 = W * .72, bw = W * .25, by0 = 70, bh = Math.min(260, H - 140);
+  ctx.font = font(13); ctx.textAlign = 'left'; ctx.fillStyle = cssv('--text-secondary');
+  ctx.fillText(`p(y | ${bpSel}) (%)`, bx0, by0 - 18);
+  const gw = bw / NO;
+  D.obj.forEach((o, j) => { const x = bx0 + j * gw, Y = v => by0 + bh - v / 50 * bh;
+    if (oi >= 0 && !isHole(oi, j)) { ctx.fillStyle = line; const v = D.values[oi][j]; ctx.fillRect(x + gw * .08, Y(v), gw * .38, by0 + bh - Y(v)); }
+    ctx.fillStyle = WCOL[o]; ctx.fillRect(x + gw * .5, Y(pm[j]), gw * .38, by0 + bh - Y(pm[j]));
+    ctx.fillStyle = muted; ctx.font = font(11); ctx.textAlign = 'center'; ctx.fillText(o, x + gw / 2, by0 + bh + 14); });
+  ctx.strokeStyle = line; ctx.beginPath(); ctx.moveTo(bx0, by0 + bh); ctx.lineTo(bx0 + bw, by0 + bh); ctx.stroke();
+  ctx.font = font(11); ctx.textAlign = 'left'; ctx.fillStyle = muted;
+  ctx.fillText(oi >= 0 ? '灰 = 表の値，色 = softmax⟨𝐱, 𝐲⟩' : '表に行が無い: 色 = softmax⟨𝐱, 𝐲⟩ だけ', bx0, by0 + bh + 32);
+  ctx.fillText('矢印は向きを描き，長さは確率の偏りの強さ', 16, H - 12);
+}
+canvas.addEventListener('pointerdown', e => { if (step !== 9 || !bpGeom) return; const r = canvas.getBoundingClientRect(), { P, k0 } = bpGeom, tip = P([bpH[0] * k0, bpH[1] * k0]);
+  if (Math.hypot(e.clientX - r.left - tip[0], e.clientY - r.top - tip[1]) < 18) { bpDrag = true; canvas.setPointerCapture(e.pointerId); } });
+canvas.addEventListener('pointermove', e => { if (!bpDrag) return; const r = canvas.getBoundingClientRect(), { S, cx, cy, k0 } = bpGeom;
+  bpH = [(e.clientX - r.left - cx) / S / k0, -(e.clientY - r.top - cy) / S / k0]; drawBiplot(); });
+canvas.addEventListener('pointerup', () => { bpDrag = false; });
+
+// ---------------------------------------------------------------- 横の欄と操作
+const fmtBig = v => { if (v < 1e5) return Math.round(v).toLocaleString('ja-JP'); const e = Math.floor(Math.log10(v)); return `${(v / 10 ** e).toFixed(1).replace(/\.0$/, '')} × 10<sup>${e}</sup>`; };
+let nSel = 3, vSel = 'small';
+function countPanel() {
+  const Vv = vSel === 'small' ? V : 50000, rows = Vv ** (nSel - 1);
+  const seen = vSel === 'small' ? (nSel === 3 ? R : nSel === 2 ? D.big2.filter(r => r.some(v => v > 0)).length : R) : Math.min(rows, 1e12);
+  const share = Math.min(1, seen / rows);
+  return `<h3>展開した表の大きさ</h3>
+  <div class="seg" id="nseg">${[2, 3, 4, 6].map(n => `<button class="${n === nSel ? 'on' : ''}" data-n="${n}">${n}-gram</button>`).join('')}</div>
+  <div class="seg" id="vseg" style="margin-top:6px"><button class="${vSel === 'small' ? 'on' : ''}" data-v="small">語彙 ${V} 語</button><button class="${vSel === 'big' ? 'on' : ''}" data-v="big">語彙 5 万語</button></div>
+  <p>文脈 = 直前 ${nSel - 1} 語の並び (V<sup>${nSel - 1}</sup> 通り)</p>
+  <div class="big">${fmtBig(rows)}<small>個の文脈</small> × ${Vv.toLocaleString('ja-JP')}<small>語</small></div>
+  <p>${vSel === 'small' ? (nSel === 3 ? `この例で観測された文脈は ${R} 個 (${(share * 100).toFixed(0)}%)．` : nSel === 2 ? '2-gram では文脈は語彙の数だけ．' : `この例の文は 3 語なので，さらに空になる．`)
+    : `学習データが 10<sup>12</sup> 語あっても，見られる文脈は多くとも 10<sup>12</sup> 個．全体の ${share >= 1e-3 ? (share * 100).toFixed(1) + '%' : fmtBig(share * 100) + '%'} 以下．`}</p>
+  <div class="meter"><i style="width:${Math.max(share * 100, .6)}%"></i></div>
+  <p class="readout">N が 1 増えるごとに文脈は V 倍になり，ほとんどが空になる．</p>`;
+}
+const legend = () => `<h3>色</h3><div class="ramp"></div><div class="ramp-l"><span>0%</span><span>確率</span><span>${D.colorMax}%</span></div>
+  <div class="key"><i style="background:var(--empty);border:1px solid var(--line)"></i>一度も出てこなかった組 (空)</div>
+  <div class="key"><i style="background:var(--hole);outline:1.5px solid var(--hole-line)"></i>穴: 観測された行の中で出てこなかった組</div>
+  <h3 style="margin-top:12px">語</h3>
+  <div class="key"><i style="background:var(--subj)"></i>主語 ${D.subj.join(' ')}</div>
+  <div class="key"><i style="background:var(--verb)"></i>動詞 ${D.verb.join(' ')}</div>
+  <div class="key"><i style="background:var(--obj)"></i>目的語 ${D.obj.join(' ')}</div>
+  <p class="readout" style="margin-top:10px">文は「主語 動詞 目的語」．値は説明用の作り物 (確率の % を整数に．各行の目的語の合計は約 ${D.mass}%，残りはほかの語)．</p>`;
+const bpSide = () => `<h3>点と矢印</h3><p>文脈 x を矢印 𝐱，語 y を点 𝐲 で表す (どちらも同じ 2 次元の空間のベクトル)．</p>
+  <p>p(y | x) = softmax<sub>y</sub> ⟨𝐱, 𝐲⟩</p>
+  <p>⟨𝐱, 𝐲⟩ は点を矢印の向きに射影した長さ × 矢印の長さ．矢印の向きにある語ほど確率が高い．</p>
+  <p>文脈の矢印は (動詞の矢印) + (主語のずれ) として，観測した値に当てはめた．表に行の無い kids heat も矢印が決まる．</p>
+  <p class="readout">点を平行移動しても行ごとの定数が変わるだけで確率は変わらない．回転・伸縮して矢印に逆の変換をしても内積は変わらない (座標の任意性)．図はこの自由度で見やすくした．</p>
+  <p>高次元 (数千次元) にしたものが LLM の出力層 (多クラスのロジスティック回帰)．文脈の矢印を語の並びから作るのが Transformer．</p>`;
+const fieldSide = () => `<h3>当てはめ</h3><p>滑らかな簡単な関数の例: <br>p(y | x) ≈ exp(α + βx + γy + δx² + εxy + ζy²)<br>(x: 文脈の座標 (縦)，y: 語の座標 (横))</p>
+  <p>係数は 6 個．穴以外の格子点で，p の誤差の二乗和を最小にした．楕円 (ガウス関数の和) や低次の多項式など，滑らかで少ない係数で書ける関数なら何でもよい．</p>
+  <p>xy の項は，文脈の座標と語の座標の積 (内積)．出力層の softmax(内積) と同じ形になる．</p>` + legend();
+
+let sortPhase = 0, sortTimers = [];
+function tools() {
+  const T = $('#tools'); T.innerHTML = '';
+  if (step === 4 && sortPhase > 0) {
+    const b = document.createElement('button'); b.textContent = '元の順に戻す';
+    b.addEventListener('click', () => { sortPhase = 0; render(); });
+    T.append(b);
+  }
+  if (step === 5 || step === 6) {
+    const seg = document.createElement('span'); seg.className = 'seg';
+    for (const [m, l] of [['interp', '格子点を通る面でつなぐ'], ['fit', '滑らかな簡単な関数を当てる']]) {
+      const b = document.createElement('button'); b.textContent = l; b.className = mode === m ? 'on' : '';
+      b.addEventListener('click', () => { mode = m; render(); }); seg.append(b);
+    }
+    T.append(seg);
+  }
+  if (step === 6) {
+    const lab = document.createElement('label');
+    lab.innerHTML = `<span>等間隔</span><input type="range" min="0" max="100" value="${Math.round(lam * 100)}" aria-label="間隔の伸び縮み"><span>伸縮後</span>`;
+    const inp = lab.querySelector('input');
+    inp.addEventListener('input', () => { lam = inp.value / 100; drawField(); readout(); nav(); });
+    T.append(lab);
+
+  }
+  if (step === 5 || step === 6) { const r = document.createElement('span'); r.className = 'readout'; r.id = 'readout'; T.append(r); readout(); }
+  if (step === 9) {
+    const lab = document.createElement('label');
+    lab.innerHTML = `<span>文脈の座標 x</span><input type="range" min="0" max="1000" value="${Math.round(smX * 1000)}" aria-label="文脈の座標">`;
+    const inp = lab.querySelector('input');
+    inp.addEventListener('input', () => { smX = inp.value / 1000; drawSoftmax(); $('#side').innerHTML = smSide(); });
+    T.append(lab);
+    const seg = document.createElement('span'); seg.className = 'seg';
+    for (const [lbl, x] of smMarks()) { const b = document.createElement('button'); b.textContent = lbl; b.addEventListener('click', () => { smX = x; inp.value = Math.round(x * 1000); drawSoftmax(); $('#side').innerHTML = smSide(); }); seg.append(b); }
+    T.append(seg);
+  }
+  if (step === 8) {
+    const seg = document.createElement('span'); seg.className = 'seg';
+    for (const nm of ['she heat', 'I pour', 'kids spill', 'I fold', 'kids heat']) { const b = document.createElement('button'); b.textContent = nm; b.className = nm === bpSel ? 'on' : '';
+      b.addEventListener('click', () => { bpSet(nm); render(); }); seg.append(b); }
+    T.append(seg);
+    const b = document.createElement('button'); b.textContent = '矢印を元に戻す'; b.addEventListener('click', () => { bpSet(bpSel); drawBiplot(); }); T.append(b);
+  }
+  if (step === 7) {
+    const seg = document.createElement('span'); seg.className = 'seg';
+    for (const [m, l] of [[false, '並べ替えた表'], [true, '関数から読んだ表']]) {
+      const b = document.createElement('button'); b.textContent = l; b.className = backFn === m ? 'on' : '';
+      b.addEventListener('click', () => { backFn = m; render(); }); seg.append(b);
+    }
+    T.append(seg);
+  }
+}
+let backFn = true;
+function readout() {
+  const r = $('#readout'); if (!r) return;
+  r.textContent = mode === 'fit' ? `当てはまりの誤差 (格子点での二乗平均) ${fit(lam).rmse.toFixed(1)} %` : '格子点を必ず通る (誤差 0) が，間の形は決まらない';
+}
+
+function nav() {
+  const pend = pending();
+  $('#next').textContent = pend ? pend.label + ' →' : '次の場面 →';
+  $('#next').classList.toggle('go', !!pend);
+  $('#prev').disabled = step === LO && !back(); $('#next').disabled = step === HI && !pend;
+  $('#skipPrev').disabled = step === LO; $('#skipNext').disabled = step === HI;
+}
+function render() {
+  [...stepsNav.children].forEach((b, i) => { if (i === step) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current'); });
+  $('#title').textContent = titles[step]; $('#prompt').textContent = prompts[step];
+  $('#page').textContent = HI - LO + 1 < stages.length ? `${step - LO + 1} / ${HI - LO + 1}` : `${step + 1} / ${stages.length}`;
+  nav();
+  const svgOn = step <= 4, fieldOn = step === 5 || step === 6, smOn = step === 9, tableOn = step === 7, bpOn = step === 8;
+  svg.style.display = svgOn ? 'block' : 'none';
+  $('#fieldWrap').style.display = fieldOn || smOn || bpOn ? 'block' : 'none';
+  $('#tableWrap').style.display = tableOn ? 'block' : 'none';
+  const tall = step === 2 || step === 3 || (step === 4 && sortPhase < 2);
+  document.body.classList.toggle('tall', tall);
+  if (!svgOn) inset.style.display = 'none';
+  if (svgOn) {
+    layoutTable(step, step === 4 ? sortPhase : 0);
+    setView(step === 4 && sortPhase === 2 ? VIEWS.zoom : VIEWS[step]);
+  }
+  if (fieldOn) { if (step === 5) lam = 0; requestAnimationFrame(() => { drawField(); readout(); }); }
+  if (smOn) requestAnimationFrame(drawSoftmax);
+  if (bpOn) requestAnimationFrame(drawBiplot);
+  if (tableOn) renderBackTable(backFn);
+  const side = $('#side');
+  side.innerHTML = step === 3 || step === 2 ? countPanel() + '<hr style="border:0;border-top:1px solid var(--line);margin:12px 0">' + legend() : fieldOn ? fieldSide() : smOn ? smSide() : bpOn ? bpSide() : legend();
+  side.querySelectorAll('[data-n]').forEach(b => b.addEventListener('click', () => { nSel = +b.dataset.n; render(); }));
+  side.querySelectorAll('[data-v]').forEach(b => b.addEventListener('click', () => { vSel = b.dataset.v; render(); }));
+  tools();
+}
+// 場面の中の段 (並べ替え，拡大，関数を当てる，伸び縮み)．「次」で先に段を進め，終わったら次の場面へ．「前」は段を戻してから前の場面へ
+let warping = false;
+function playWarp() {
+  if (warping) return; warping = true;
+  const l0 = lam, t0 = performance.now(), ms = 2400 * (1 - l0) + 300;
+  const tick = now => { if (step !== 6) { warping = false; return; } const t = Math.min(1, (now - t0) / ms); lam = lerp(l0, 1, ease(t));
+    const inp = document.querySelector('#tools input[type=range]'); if (inp) inp.value = Math.round(lam * 100);
+    drawField(); readout(); if (t < 1) requestAnimationFrame(tick); else { warping = false; render(); } };
+  requestAnimationFrame(tick);
+}
+function pending() {
+  if (step === 4 && sortPhase === 0) return { label: '並べ替える', run: () => { sortPhase = 1; render(); } };
+  if (step === 4 && sortPhase === 1) return { label: '観測された所を拡大', run: () => { sortPhase = 2; render(); } };
+  if (step === 5 && mode === 'interp') return { label: '滑らかな関数を当てる', run: () => { mode = 'fit'; render(); } };
+  if (step === 6 && lam < 1) return { label: '伸び縮みさせる', run: playWarp };
+  return null;
+}
+function back() {
+  if (step === 4 && sortPhase > 0) return () => { sortPhase--; render(); };
+  if (step === 5 && mode === 'fit') return () => { mode = 'interp'; render(); };
+  return null;
+}
+function next() { const p = pending(); if (p) { p.run(); return true; } if (step < HI) { go(step + 1); return true; } return false; }
+function prev() { const b = back(); if (b) { b(); return true; } if (step > LO) { go(step - 1, true); return true; } return false; }
+// スライドに埋め込むとき (?embed．embed.js) の操作: 進めたら true
+window.demoSteps = { next, prev, start: () => go(LO), end: () => go(HI, true) };
+function go(n, backward = false) {
+  const from = step; step = n;
+  // 前から入ったら段の初め，後ろから戻ったら段の終わり
+  if (step === 4 && from !== 4) sortPhase = backward ? 2 : 0;
+  if (step === 5 && from !== 5) mode = backward ? 'fit' : 'interp';
+  if (step === 6 && from !== 6) { lam = backward ? 1 : 0; mode = 'fit'; }
+  render();
+}
+$('#prev').addEventListener('click', prev);
+$('#next').addEventListener('click', next);
+$('#skipPrev').addEventListener('click', () => { if (step > LO) go(step - 1); });
+$('#skipNext').addEventListener('click', () => { if (step < HI) go(step + 1); });
+addEventListener('keydown', e => { if (e.target.closest('input')) return;
+  if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); e.shiftKey ? $('#skipNext').click() : next(); }
+  if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); e.shiftKey ? $('#skipPrev').click() : prev(); } });
+// 明暗の切替: svg のセルの色を塗り直し，canvas と表は描き直す
+function recolor() {
+  readTheme();
+  svg.querySelectorAll('rect[data-v]').forEach(r => { const v = +r.dataset.v; r.setAttribute('fill', r.dataset.hole ? 'var(--hole)' : v > 0 ? tone(v) : 'var(--empty)'); });
+  svg.querySelectorAll('text[data-tv]').forEach(t => t.setAttribute('fill', t.dataset.hole ? 'var(--hole-text)' : ink(+t.dataset.tv)));
+}
+$('#themeBtn').addEventListener('click', () => { document.documentElement.dataset.theme = DK ? 'light' : 'dark'; recolor(); render(); });
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { recolor(); render(); });
+recolor();
+addEventListener('resize', () => { if (step === 5 || step === 6) drawField(); if (step === 9) drawSoftmax(); if (step === 8) drawBiplot(); });
+const q = new URLSearchParams(location.search).get('scene');
+svg.setAttribute('viewBox', VIEWS[0].join(' ')); vb = VIEWS[0].slice();
+go(Math.max(LO, Math.min(HI, q ? +q - 1 : LO)));
+})();
+</script>
+<script>window.XP_SRC = [['.intro', ''], ['#side', '右の欄']];</script>
+<style>
+#xpBtn { font: inherit; color: var(--text-primary); background: var(--surface-1); border: 1px solid var(--line); border-radius: 6px; padding: 3px 10px; cursor: pointer; }
+.xp-src { cursor: zoom-in; }
+#xpOv { position: fixed; inset: 0; z-index: 9999; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,.45); }
+#xpOv.show { display: flex; }
+#xpBox { background: var(--surface-1); color: var(--text-primary); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,.35);
+  width: min(92vw, 1100px); max-height: 88vh; overflow: auto; padding: 18px 26px 22px; position: relative; }
+#xpBox .xp-body { zoom: 1.7; line-height: 1.6; }
+#xpBox .xp-sec + .xp-sec { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--line); }
+#xpBox .xp-h { font-size: 11px; color: var(--text-muted); margin-bottom: 2px; }
+#xpBox .xp-close { position: absolute; top: 8px; right: 12px; font-size: 20px; line-height: 1; border: 0; background: none; color: var(--text-muted); cursor: pointer; }
+#xpBox .xp-hint { margin-top: 12px; font-size: 12px; color: var(--text-muted); }
+</style>
+<div id="xpOv"><div id="xpBox"><button class="xp-close" title="閉じる (Esc)">×</button><div class="xp-body" id="xpBody"></div>
+<div class="xp-hint">説明を大きく表示 (i または Esc で閉じる．← → の操作はそのまま効く)</div></div></div>
+<script>/* 説明の拡大表示: XP_SRC に並べた要素の中身を大きな窓に写す */
+(function () {
+  var SRC = window.XP_SRC || [], ov = document.getElementById('xpOv'), body = document.getElementById('xpBody'), obs = null;
+  function els() { var out = []; SRC.forEach(function (s) { document.querySelectorAll(s[0]).forEach(function (e) { out.push([e, s[1]]); }); }); return out; }
+  function visible(e) { return e.offsetParent !== null && e.textContent.trim() !== ''; }
+  function fill() {
+    body.innerHTML = '';
+    els().forEach(function (p) { if (!visible(p[0])) return;
+      var sec = document.createElement('div'); sec.className = 'xp-sec';
+      if (p[1]) { var h = document.createElement('div'); h.className = 'xp-h'; h.textContent = p[1]; sec.append(h); }
+      var c = p[0].cloneNode(true); c.removeAttribute('id'); c.querySelectorAll('[id]').forEach(function (x) { x.removeAttribute('id'); });
+      c.querySelectorAll('input,select,button,textarea').forEach(function (x) { x.remove(); });
+      c.classList.remove('xp-src'); c.style.maxHeight = 'none'; c.style.overflow = 'visible'; c.style.border = '0'; c.style.cursor = 'auto';
+      sec.append(c); body.append(sec); });
+    if (!body.children.length) body.textContent = '(この場面の説明はありません)';
+  }
+  function open() { fill(); ov.classList.add('show');
+    obs = new MutationObserver(function () { clearTimeout(obs.t); obs.t = setTimeout(fill, 60); });
+    els().forEach(function (p) { obs.observe(p[0], { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['style', 'class'] }); }); }
+  function close() { ov.classList.remove('show'); if (obs) obs.disconnect(); obs = null; }
+  function toggle() { ov.classList.contains('show') ? close() : open(); }
+  var b = document.createElement('button'); b.id = 'xpBtn'; b.textContent = '説明 ⤢'; b.title = '説明を大きく表示 (i)'; b.onclick = toggle;
+  var tb = document.getElementById('themeBtn'); if (tb) tb.before(b); else document.body.append(b);
+  ov.addEventListener('click', function (e) { if (e.target === ov || e.target.classList.contains('xp-close')) close(); });
+  addEventListener('keydown', function (e) {
+    var tag = (e.target.tagName || '').toLowerCase(); if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+    if (e.key === 'i' && !e.metaKey && !e.ctrlKey && !e.altKey) { toggle(); e.preventDefault(); }
+    else if (e.key === 'Escape' && ov.classList.contains('show')) { close(); e.stopImmediatePropagation(); }
+  }, true);
+  els().forEach(function (p) { p[0].classList.add('xp-src'); p[0].title = p[0].title || 'クリックで説明を大きく表示'; });
+  document.addEventListener('click', function (e) {
+    if (ov.contains(e.target) || e.target.closest('button,input,select,a,label,svg,canvas,textarea,.js-plotly-plot')) return;
+    if (e.target.closest('.xp-src')) open();
+  });
+})();</script>
+<script src="embed.js"></script>
+</body>
+</html>

@@ -1,0 +1,588 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<script>/* 明暗の既定は明 (OS の設定には従わない)．?theme=dark で暗く開く */
+(function () { var t = new URLSearchParams(location.search).get('theme'); document.documentElement.dataset.theme = t === 'dark' ? 'dark' : 'light'; })();</script>
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MDS Viewer</title>
+<!--
+  mds.html — 多次元尺度構成法 (MDS) のデモ．3 次元の点から対の距離 δ_ij を作り (距離の定義を選ぶ)，
+  当てはめ方 (古典的 MDS，計量的 MDS = SMACOF，Sammon，非計量 MDS，t-SNE) を選んで 2 次元の地図を描く．
+  左に 3 次元の点 (と近傍のグラフ)，右に地図，横の欄にシェパード図 (元の距離 δ と地図の距離 d) と当てはまりを出す．
+  反復する方法は反復の途中を再生できる．Plotly は vendor/ に同梱 (ネットなしで動く)．使い方は README.org．
+  距離の定義 × 当てはめ方で，Isomap (測地距離 × 古典的 MDS) や PHATE に近いもの (拡散の距離 × 計量的 MDS) も作れる．
+-->
+<script src="vendor/plotly-2.35.2.min.js"></script>
+<style>
+:root {
+  color-scheme: light;
+  --surface-0: #f4f3f0; --surface-1: #fcfcfb; --surface-2: #efeeea;
+  --line: #dddbd5; --grid: #e9e7e2;
+  --text-primary: #0b0b0b; --text-secondary: #52514e; --text-muted: #7c7b76;
+  --accent: #2a78d6; --ring: #0b0b0b; --edge: #c9c7c0; --nb: #eb6834; --e-near: #3d3c38; --e-far: #dcdad3;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4;
+  --seq-lo: #cde2fb; --seq-mid: #3987e5; --seq-hi: #0d366b;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --surface-0: #121211; --surface-1: #1a1a19; --surface-2: #242422; --line: #34332f; --grid: #2a2a27;
+    --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #8f8e86;
+    --accent: #3987e5; --ring: #f0efec; --edge: #4a4944; --nb: #d95926; --e-near: #dedcd4; --e-far: #3a3935;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181;
+    --seq-lo: #104281; --seq-mid: #3987e5; --seq-hi: #cde2fb;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface-0: #121211; --surface-1: #1a1a19; --surface-2: #242422; --line: #34332f; --grid: #2a2a27;
+  --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #8f8e86;
+  --accent: #3987e5; --ring: #f0efec; --edge: #4a4944; --nb: #d95926; --e-near: #dedcd4; --e-far: #3a3935;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181;
+  --seq-lo: #104281; --seq-mid: #3987e5; --seq-hi: #cde2fb;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: var(--surface-0); color: var(--text-primary); font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", "Segoe UI", sans-serif;
+  display: grid; grid-template-rows: auto 1fr; overflow: hidden; }
+header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 8px 16px; border-bottom: 1px solid var(--line); background: var(--surface-1); }
+header h1 { font-size: 16px; margin: 0 8px 0 0; font-weight: 600; }
+header .grow { flex: 1; }
+button, select, input[type=number] { font: inherit; color: var(--text-primary); background: var(--surface-1); border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; }
+button { cursor: pointer; }
+button:hover { background: var(--surface-2); }
+button.on { border-color: var(--accent); color: var(--accent); }
+button:disabled { opacity: .45; cursor: default; }
+.seg { display: inline-flex; flex-wrap: wrap; }
+.seg button { border-radius: 0; margin-left: -1px; }
+.seg button:first-child { border-radius: 6px 0 0 6px; margin-left: 0; }
+.seg button:last-child { border-radius: 0 6px 6px 0; }
+main { display: grid; grid-template-columns: 310px 1fr; min-height: 0; }
+aside { border-right: 1px solid var(--line); background: var(--surface-1); overflow-y: auto; padding: 12px 14px; min-height: 0; }
+aside h2 { font-size: 12px; font-weight: 600; color: var(--text-secondary); margin: 14px 0 6px; letter-spacing: .04em; }
+aside h2:first-child { margin-top: 0; }
+aside select { width: 100%; }
+aside input[type=range] { width: 100%; accent-color: var(--accent); }
+.muted { color: var(--text-muted); font-size: 12px; }
+.row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.note { font-size: 12px; color: var(--text-secondary); background: var(--surface-2); border-radius: 6px; padding: 6px 8px; margin-top: 6px; }
+table.metrics { border-collapse: collapse; width: 100%; font-size: 12px; }
+table.metrics td { padding: 2px 4px 2px 0; }
+table.metrics td:last-child { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+#shepard { height: 220px; }
+#panes { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line); min-height: 0; }
+.pane { display: grid; grid-template-rows: auto 1fr; background: var(--surface-1); min-width: 0; min-height: 0; }
+.pane .bar2 { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; padding: 6px 10px; border-bottom: 1px solid var(--line); font-size: 12px; min-height: 37px; }
+.pane .bar2 .name { font-weight: 600; font-size: 13px; margin-right: 4px; }
+.plot { min-height: 0; min-width: 0; }
+#busy { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,.08); font-size: 14px; color: var(--text-secondary); }
+#busy.show { display: flex; }
+@media (max-width: 860px) { body { overflow: auto; } main { grid-template-columns: 1fr; } aside { border-right: 0; border-bottom: 1px solid var(--line); order: 2; }
+  #panes { grid-template-columns: 1fr; grid-auto-rows: 70vh; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>多次元尺度構成法のデモ — 距離から地図へ</h1>
+  <span class="muted">左: 3 次元の点と，その間の距離 δ_ij のグラフ (地図に渡すのは δ だけ)　右: δ を保つように置いた 2 次元の地図</span>
+  <span class="grow"></span>
+  <button id="themeBtn" title="明暗の切替">明暗</button>
+</header>
+<main>
+  <aside>
+    <h2>データ</h2>
+    <select id="dataset">
+      <option value="flat">平らな楕円体 (ガウス)</option>
+      <option value="scurve" selected>S 字の曲面</option>
+      <option value="swiss">巻いた曲面 (スイスロール)</option>
+      <option value="blobs">球面の上の 4 つの塊</option>
+      <option value="sphere">球面 (距離は大円の長さ)</option>
+    </select>
+    <div class="row" style="margin-top:6px">
+      <label class="muted">点の数 <input type="number" id="nPts" min="100" max="700" step="50" value="400" style="width:66px"></label>
+      <label class="muted">雑音 <input type="number" id="noise" min="0" max="1" step="0.05" value="0.05" style="width:62px"></label>
+      <button id="regen" title="乱数を変えて作り直す">作り直す</button>
+    </div>
+    <div id="colorNote" class="muted" style="margin-top:4px"></div>
+
+    <h2>① 距離の定義 δ_ij</h2>
+    <span class="seg" id="distSeg">
+      <button data-d="euc" class="on" title="3 次元の直線距離">ユークリッド</button>
+      <button data-d="geo" title="k 近傍のグラフの最短路 (曲面に沿った距離)">測地 (近傍グラフ)</button>
+      <button data-d="diff" title="ランダムウォークを t 歩進めた分布の違い">拡散</button>
+    </span>
+    <div class="row" style="margin-top:4px">
+      <label class="muted">近傍 k <input type="number" id="kNN" min="3" max="40" value="10" style="width:56px"></label>
+      <label class="muted">拡散の歩数 t <input type="number" id="tDiff" min="1" max="64" value="8" style="width:56px"></label>
+    </div>
+    <div id="distNote" class="note"></div>
+
+    <h2>② 当てはめ方</h2>
+    <span class="seg" id="methodSeg">
+      <button data-m="cmds" class="on" title="二重中心化した δ² を固有値分解 (主座標分析)">古典的 MDS</button>
+      <button data-m="smacof" title="ストレス Σ(d−δ)² を反復で減らす">計量的 MDS</button>
+      <button data-m="sammon" title="Σ(d−δ)²/δ．近い組を重く見る">Sammon</button>
+      <button data-m="nmds" title="δ の大小の順序だけを保つ (Kruskal)">非計量 MDS</button>
+      <button data-m="tsne" title="近傍の確率の KL 情報量">t-SNE</button>
+    </span>
+    <div class="row" style="margin-top:4px">
+      <label class="muted" id="perpBox">perplexity <input type="number" id="perp" min="5" max="80" value="30" style="width:56px"></label>
+    </div>
+    <div id="methodNote" class="note"></div>
+    <div id="iterBox" style="margin-top:6px">
+      <div class="row"><span class="muted">反復</span><span class="grow"></span><span id="iterLab" class="muted"></span><button id="iterPlay" title="反復の途中を再生">▶</button></div>
+      <input type="range" id="iterStep" min="0" max="100" value="100">
+    </div>
+
+    <h2>シェパード図 (横 δ，縦 d)</h2>
+    <div id="shepard"></div>
+    <div class="muted">点が右上がりの細い帯に乗るほど，距離がよく保たれている．非計量 MDS では順序だけを保つので，曲がった帯でよい (線は単調回帰)．</div>
+
+    <h2>当てはまり</h2>
+    <table class="metrics" id="metrics"></table>
+
+    <h2>表示</h2>
+    <div class="row"><span class="muted">左の図</span><span class="seg" id="viewSeg"><button data-v="graph" class="on" title="点の間の距離 δ を辺で描く (地図に渡すのはこれだけ)">距離のグラフ</button><button data-v="points">点だけ</button></span></div>
+    <div id="edgeBox">
+      <div class="row"><span class="seg" id="edgeSeg"><button data-e="knn" class="on" title="各点から δ で近い k 点へ辺を引く">近傍だけ</button><button data-e="all" title="点を間引いて，全ての組に辺を引く">間引いて全組</button></span>
+        <label class="muted" id="kShowBox">k <input type="number" id="kShow" min="1" max="20" value="6" style="width:52px"></label>
+        <label class="muted" id="mAllBox">点 <input type="number" id="mAll" min="10" max="80" value="40" style="width:56px"></label></div>
+      <div class="row"><label class="muted"><input type="checkbox" id="edgeMap" checked> 地図にも同じ辺を描く</label></div>
+      <div class="muted">辺の濃さと太さは δ の小ささ．辺は直線で描くが，その長さとして渡すのは δ (測地・拡散では曲面に沿った値)．</div>
+    </div>
+    <div class="row"><label class="muted"><input type="checkbox" id="showGraph"> 計算に使う近傍のグラフ (測地・拡散)</label></div>
+    <div class="row"><label class="muted">点の大きさ <input type="number" id="ptSize" min="2" max="14" value="6" style="width:56px"></label></div>
+    <div class="muted" style="margin-top:4px">右の地図の点をクリックすると，その点の δ で近い 10 点 (橙の輪) を両方に出す．Esc で解除．</div>
+  </aside>
+  <section id="panes">
+    <div class="pane"><div class="bar2"><span class="name" id="leftName">3 次元の点</span><span class="muted" id="leftNote"></span></div><div class="plot" id="plot3"></div></div>
+    <div class="pane"><div class="bar2"><span class="name">2 次元の地図</span><span class="muted" id="mapNote"></span></div><div class="plot" id="plot2"></div></div>
+  </section>
+</main>
+<div id="busy">計算中…</div>
+<script>
+"use strict";
+// ============================================================ 道具
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function gauss(r) { const u = 1 - r(), v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+const toRGB = c => c[0] === '#' ? [1, 3, 5].map(i => parseInt(c.substr(i, 2), 16)) : (c.match(/\d+/g) || [0, 0, 0]).slice(0, 3).map(Number);
+const mix = (a, b, t) => { const pa = toRGB(a), pb = toRGB(b); return 'rgb(' + pa.map((v, i) => Math.round(v + (pb[i] - v) * t)).join(',') + ')'; };
+const seq = t => (t = Math.max(0, Math.min(1, t)), t < .5 ? mix(css('--seq-lo'), css('--seq-mid'), t * 2) : mix(css('--seq-mid'), css('--seq-hi'), (t - .5) * 2));
+const fmt = (x, k = 3) => isFinite(x) ? x.toFixed(k) : '—';
+const clampInt = (v, lo, hi, d) => { v = parseInt(v, 10); return isFinite(v) ? Math.max(lo, Math.min(hi, v)) : d; };
+
+// ============================================================ 状態
+const S = { X: [], color: [], kind: 'seq', cats: [], label: '', seed: 1, dist: 'euc', method: 'cmds',
+  delta: null, knn: null, view: 'graph', emode: 'knn', ecache: null, snaps: [], step: 0, sel: null, playing: 0, key: 0 };
+
+// ============================================================ データ (色は面の上の本当の位置)
+function makeData(kind, n, noise, seed) {
+  const rnd = mulberry32(seed * 7919 + 13), R = s => gauss(rnd) * s, X = [], C = [];
+  let label = '', ck = 'seq', cats = [], sphere = null;
+  for (let i = 0; i < n; i++) {
+    let p, c;
+    if (kind === 'flat') { const a = R(2), b = R(1), w = R(.25); p = [.8 * a - .4 * b + .3 * w, .5 * a + .8 * b - .2 * w, .3 * a + .3 * b + .9 * w]; c = a; label = '第 1 の軸の位置'; }
+    else if (kind === 'scurve') { const t = 3 * Math.PI * (rnd() - .5), h = 2 * rnd(); p = [Math.sin(t), h * 1.2, Math.sign(t) * (Math.cos(t) - 1)]; c = t; label = '曲面に沿った位置 (S の進み)'; }
+    else if (kind === 'swiss') { const t = Math.sqrt((1.5 * Math.PI) ** 2 * (1 + 8 * rnd())), h = rnd(); p = [t * Math.cos(t) / 3.5, h * 4, t * Math.sin(t) / 3.5]; c = t; label = '巻きに沿った位置'; }
+    else if (kind === 'blobs') { const cs = [[1, 0, 0], [0, 1, 0], [-1, 0, .2], [0, -.6, .8]], k = Math.floor(rnd() * 4), cc = cs[k], q = [cc[0] + R(.25), cc[1] + R(.25), cc[2] + R(.25)], nq = Math.hypot(...q);
+      p = q.map(v => 2 * v / nq); c = k; ck = 'cat'; label = '塊'; cats = ['塊 1', '塊 2', '塊 3', '塊 4']; }
+    else { const z = 2 * rnd() - 1, th = 2 * Math.PI * rnd(), r = Math.sqrt(1 - z * z); p = [2 * r * Math.cos(th), 2 * r * Math.sin(th), 2 * z]; c = z; label = '高さ (緯度)'; sphere = true; }
+    if (noise > 0 && kind !== 'sphere') p = p.map(v => v + R(noise));
+    X.push(p); C.push(c);
+  }
+  return { X, C, label, kind: ck, cats, sphere };
+}
+function setData() {
+  const d = makeData($('#dataset').value, clampInt($('#nPts').value, 100, 700, 400), Math.max(0, +$('#noise').value || 0), S.seed);
+  S.X = d.X; S.kind = d.kind; S.cats = d.cats; S.label = d.label; S.sphere = !!d.sphere; S.sel = null;
+  if (d.kind === 'seq') { const lo = Math.min(...d.C), hi = Math.max(...d.C); S.color = d.C.map(c => hi > lo ? (c - lo) / (hi - lo) : .5); } else S.color = d.C;
+  $('#colorNote').textContent = '点の色: ' + d.label + '．地図の上で色の並びが保たれていれば，構造がうまく写っている．';
+  S.key++;
+  recompute();
+}
+const pointColor = i => S.kind === 'cat' ? css('--s' + (1 + S.color[i] % 5)) : seq(S.color[i]);
+
+// ============================================================ 距離
+function euclid(X) {
+  const n = X.length, D = Array.from({ length: n }, () => new Float64Array(n));
+  for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) { const d = Math.hypot(X[i][0] - X[j][0], X[i][1] - X[j][1], X[i][2] - X[j][2]); D[i][j] = D[j][i] = d; }
+  return D;
+}
+function greatCircle(X) {
+  const n = X.length, D = Array.from({ length: n }, () => new Float64Array(n));
+  for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) { const c = (X[i][0] * X[j][0] + X[i][1] * X[j][1] + X[i][2] * X[j][2]) / 4; const d = 2 * Math.acos(Math.max(-1, Math.min(1, c))); D[i][j] = D[j][i] = d; }
+  return D;
+}
+function knnOf(E, k) { return E.map((row, i) => [...row.keys()].filter(j => j !== i).sort((a, b) => row[a] - row[b]).slice(0, k)); }
+function geodesic(E, k) {
+  const n = E.length, nb = knnOf(E, k), adj = Array.from({ length: n }, () => []);
+  nb.forEach((js, i) => js.forEach(j => { adj[i].push([j, E[i][j]]); adj[j].push([i, E[i][j]]); }));
+  const D = Array.from({ length: n }, () => new Float64Array(n).fill(Infinity));
+  for (let s = 0; s < n; s++) {      // Dijkstra (2 分ヒープ)
+    const dist = D[s]; dist[s] = 0; const heap = [[0, s]];
+    const push = x => { heap.push(x); let i = heap.length - 1; while (i > 0) { const p = (i - 1) >> 1; if (heap[p][0] <= heap[i][0]) break; [heap[p], heap[i]] = [heap[i], heap[p]]; i = p; } };
+    const pop = () => { const top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; let i = 0; for (;;) { const l = 2 * i + 1, r = l + 1; let m = i; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === i) break; [heap[m], heap[i]] = [heap[i], heap[m]]; i = m; } } return top; };
+    while (heap.length) { const [d, u] = pop(); if (d > dist[u]) continue; for (const [v, w] of adj[u]) if (d + w < dist[v]) { dist[v] = d + w; push([dist[v], v]); } }
+  }
+  // つながっていない組は最大の 1.2 倍にする
+  let mx = 0; D.forEach(r => r.forEach(v => { if (isFinite(v) && v > mx) mx = v; }));
+  let broken = 0; D.forEach(r => { for (let j = 0; j < n; j++) if (!isFinite(r[j])) { r[j] = mx * 1.2; broken++; } });
+  return { D, broken: broken / 2, nb };
+}
+function matmul(A, B) {
+  const n = A.length, C = Array.from({ length: n }, () => new Float64Array(n));
+  for (let i = 0; i < n; i++) { const Ai = A[i], Ci = C[i]; for (let k = 0; k < n; k++) { const a = Ai[k]; if (a === 0) continue; const Bk = B[k]; for (let j = 0; j < n; j++) Ci[j] += a * Bk[j]; } }
+  return C;
+}
+function diffusion(E, k, t) {
+  const n = E.length, nb = knnOf(E, k);
+  const sig = nb.map((js, i) => E[i][js[js.length - 1]] || 1);       // 点ごとの尺度 (k 番目の近傍までの距離)
+  let P = Array.from({ length: n }, (_, i) => { const r = new Float64Array(n); let s = 0; for (let j = 0; j < n; j++) { const v = Math.exp(-(E[i][j] ** 2) / (sig[i] * sig[j])); r[j] = v; s += v; } for (let j = 0; j < n; j++) r[j] /= s; return r; });
+  // P^t (2 進の累乗)
+  let R = null, B = P, e = t;
+  while (e > 0) { if (e & 1) R = R ? matmul(R, B) : B; e >>= 1; if (e) B = matmul(B, B); }
+  const D = Array.from({ length: n }, () => new Float64Array(n));
+  for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) { let s = 0; for (let m = 0; m < n; m++) { const a = Math.sqrt(R[i][m]) - Math.sqrt(R[j][m]); s += a * a; } D[i][j] = D[j][i] = Math.sqrt(s); }   // Hellinger
+  return { D, nb };
+}
+
+// ============================================================ 当てはめ方
+function normalizeDelta(D) { let s = 0, c = 0; D.forEach((r, i) => { for (let j = i + 1; j < r.length; j++) { s += r[j] * r[j]; c++; } }); const k = Math.sqrt(c / s); return D.map(r => r.map(v => v * k)); }
+function cmds(D) {
+  const n = D.length, B = Array.from({ length: n }, () => new Float64Array(n));
+  const rm = new Float64Array(n); let gm = 0;
+  for (let i = 0; i < n; i++) { for (let j = 0; j < n; j++) rm[i] += D[i][j] ** 2; rm[i] /= n; gm += rm[i]; }
+  gm /= n;
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) B[i][j] = -.5 * (D[i][j] ** 2 - rm[i] - rm[j] + gm);
+  // 上位 2 つの固有ベクトル (べき乗法と減次)．負の固有値の割合も出す
+  const vecs = [], vals = [];
+  for (let c = 0; c < 2; c++) {
+    let v = new Float64Array(n).map((_, i) => Math.sin(i * (c + 1) * 1.37) + .1), lam = 0;
+    for (let it = 0; it < 300; it++) {
+      const w = new Float64Array(n);
+      for (let i = 0; i < n; i++) { let s = 0; const Bi = B[i]; for (let j = 0; j < n; j++) s += Bi[j] * v[j]; w[i] = s; }
+      vecs.forEach((u, k) => { let d = 0; for (let i = 0; i < n; i++) d += u[i] * w[i]; for (let i = 0; i < n; i++) w[i] -= vals[k] * u[i] * d / vals[k]; });
+      const nw = Math.hypot(...w); lam = nw; for (let i = 0; i < n; i++) v[i] = w[i] / nw;
+    }
+    let rq = 0; for (let i = 0; i < n; i++) { let s = 0; for (let j = 0; j < n; j++) s += B[i][j] * v[j]; rq += v[i] * s; }
+    vecs.push(v); vals.push(rq);
+  }
+  let tr = 0; for (let i = 0; i < n; i++) tr += B[i][i];
+  const Y = Array.from({ length: n }, (_, i) => [vecs[0][i] * Math.sqrt(Math.max(vals[0], 0)), vecs[1][i] * Math.sqrt(Math.max(vals[1], 0))]);
+  return { Y, explained: (vals[0] + vals[1]) / tr };
+}
+function mapDist(Y) { const n = Y.length, d = Array.from({ length: n }, () => new Float64Array(n)); for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) { d[i][j] = d[j][i] = Math.hypot(Y[i][0] - Y[j][0], Y[i][1] - Y[j][1]) || 1e-9; } return d; }
+// SMACOF (重みなし): Guttman 変換．target は δ (計量) か単調回帰の値 (非計量)
+function guttman(Y, T) {
+  const n = Y.length, d = mapDist(Y), Z = Array.from({ length: n }, () => [0, 0]);
+  for (let i = 0; i < n; i++) { let bi = 0; for (let j = 0; j < n; j++) if (j !== i) { const b = -T[i][j] / d[i][j]; bi -= b; Z[i][0] += b * Y[j][0]; Z[i][1] += b * Y[j][1]; } Z[i][0] += bi * Y[i][0]; Z[i][1] += bi * Y[i][1]; Z[i][0] /= n; Z[i][1] /= n; }
+  return Z;
+}
+function smacof(D, Y0, iters) { let Y = Y0.map(p => p.slice()); const snaps = [Y]; for (let t = 0; t < iters; t++) { Y = guttman(Y, D); if (t % 2 === 1 || t === iters - 1) snaps.push(Y); } return snaps; }
+function sammon(D, Y0, iters) {
+  const n = D.length; let Y = Y0.map(p => p.slice()); const snaps = [Y]; let c = 0; D.forEach((r, i) => { for (let j = i + 1; j < n; j++) c += r[j]; });
+  for (let t = 0; t < iters; t++) {
+    const d = mapDist(Y), Z = Y.map(p => p.slice());
+    for (let i = 0; i < n; i++) for (let k = 0; k < 2; k++) {
+      let g = 0, h = 0;
+      for (let j = 0; j < n; j++) { if (j === i) continue; const dl = Math.max(D[i][j], 1e-9), dd = d[i][j], diff = Y[i][k] - Y[j][k];
+        g += (dl - dd) / (dl * dd) * diff; h += 1 / (dl * dd) * ((dl - dd) - diff * diff / dd * (1 + (dl - dd) / dd)); }
+      g *= -2 / c; h *= -2 / c; Z[i][k] = Y[i][k] - .3 * g / Math.abs(h || 1e-9);
+    }
+    Y = Z; if (t % 2 === 1 || t === iters - 1) snaps.push(Y);
+  }
+  return snaps;
+}
+// 非計量 MDS (Kruskal): 単調回帰 (PAVA) と SMACOF の交互
+function pairsSorted(D) { const n = D.length, P = []; for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) P.push([i, j, D[i][j]]); P.sort((a, b) => a[2] - b[2]); return P; }
+function pava(y) { const v = [], w = [], idx = []; for (let i = 0; i < y.length; i++) { v.push(y[i]); w.push(1); idx.push(i); while (v.length > 1 && v[v.length - 2] > v[v.length - 1]) { const a = v.pop(), wa = w.pop(); idx.pop(); const b = v.pop(), wb = w.pop(); v.push((a * wa + b * wb) / (wa + wb)); w.push(wa + wb); } } const out = []; v.forEach((x, k) => { for (let m = 0; m < w[k]; m++) out.push(x); }); return out; }
+function nmds(D, Y0, iters) {
+  const n = D.length, P = pairsSorted(D); let Y = Y0.map(p => p.slice()); const snaps = [Y]; const fits = [];
+  for (let t = 0; t < iters; t++) {
+    const d = mapDist(Y), dh = pava(P.map(p => d[p[0]][p[1]]));
+    let s = 0, c = 0; dh.forEach(v => { s += v * v; c++; }); const k = Math.sqrt(c / s);       // 尺度をそろえる
+    const T = Array.from({ length: n }, () => new Float64Array(n)); P.forEach((p, m) => { T[p[0]][p[1]] = T[p[1]][p[0]] = dh[m] * k; });
+    Y = guttman(Y, T); if (t % 2 === 1 || t === iters - 1) snaps.push(Y);
+  }
+  return snaps;
+}
+// t-SNE (正確版．n ≤ 700)
+function tsne(D, Y0, perp, iters) {
+  const n = D.length, Pm = Array.from({ length: n }, () => new Float64Array(n)), H = Math.log(perp);
+  for (let i = 0; i < n; i++) {
+    let lo = 1e-20, hi = 1e20, beta = 1;
+    for (let it = 0; it < 60; it++) {
+      let s = 0, sh = 0; for (let j = 0; j < n; j++) if (j !== i) { const v = Math.exp(-(D[i][j] ** 2) * beta); Pm[i][j] = v; s += v; sh += D[i][j] ** 2 * v; }
+      const ent = Math.log(s) + beta * sh / s; if (Math.abs(ent - H) < 1e-5) { for (let j = 0; j < n; j++) Pm[i][j] /= s; break; }
+      if (ent > H) { lo = beta; beta = hi > 1e19 ? beta * 2 : (beta + hi) / 2; } else { hi = beta; beta = (beta + lo) / 2; }
+      if (it === 59) for (let j = 0; j < n; j++) Pm[i][j] /= s;
+    }
+  }
+  const P = Array.from({ length: n }, () => new Float64Array(n));
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) P[i][j] = Math.max((Pm[i][j] + Pm[j][i]) / (2 * n), 1e-12);
+  // 初期値: 古典的 MDS を小さく縮めたもの
+  let sc = 0; Y0.forEach(p => { sc = Math.max(sc, Math.abs(p[0]), Math.abs(p[1])); });
+  let Y = Y0.map(p => [p[0] / sc * 1e-2 * 50, p[1] / sc * 1e-2 * 50]);
+  const V = Y.map(() => [0, 0]), G = Y.map(() => [1, 1]); const snaps = [Y.map(p => p.slice())];
+  for (let t = 0; t < iters; t++) {
+    const ex = t < 100 ? 12 : 1, mom = t < 100 ? .5 : .8, lr = 100;
+    const Q = Array.from({ length: n }, () => new Float64Array(n)); let Z = 0;
+    for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) { const q = 1 / (1 + (Y[i][0] - Y[j][0]) ** 2 + (Y[i][1] - Y[j][1]) ** 2); Q[i][j] = Q[j][i] = q; Z += 2 * q; }
+    for (let i = 0; i < n; i++) {
+      let g0 = 0, g1 = 0;
+      for (let j = 0; j < n; j++) { if (j === i) continue; const q = Q[i][j], m = (ex * P[i][j] - q / Z) * q; g0 += m * (Y[i][0] - Y[j][0]); g1 += m * (Y[i][1] - Y[j][1]); }
+      const g = [4 * g0, 4 * g1];
+      for (let k = 0; k < 2; k++) { G[i][k] = Math.sign(g[k]) !== Math.sign(V[i][k]) ? G[i][k] + .2 : Math.max(G[i][k] * .8, .01); V[i][k] = mom * V[i][k] - lr * G[i][k] * g[k]; }
+    }
+    Y = Y.map((p, i) => [p[0] + V[i][0], p[1] + V[i][1]]);
+    const m0 = Y.reduce((s, p) => s + p[0], 0) / n, m1 = Y.reduce((s, p) => s + p[1], 0) / n; Y = Y.map(p => [p[0] - m0, p[1] - m1]);
+    if (t % 5 === 4 || t === iters - 1) snaps.push(Y.map(p => p.slice()));
+  }
+  return snaps;
+}
+
+// ============================================================ 当てはまり
+function metrics(D, Y) {
+  const n = D.length, d = mapDist(Y); let a = 0, b = 0, ab = 0;
+  for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) { ab += D[i][j] * d[i][j]; b += d[i][j] * d[i][j]; a += D[i][j] * D[i][j]; }
+  const k = ab / b;                                      // 地図の尺度を最適にそろえる
+  let s = 0; for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) s += (D[i][j] - k * d[i][j]) ** 2;
+  const stress = Math.sqrt(s / a);
+  // 近傍の保存 (δ の 10 近傍のうち地図でも 10 近傍)
+  const kk = 10, nbD = knnOf(D, kk), nbY = knnOf(d, kk); let hit = 0; nbD.forEach((js, i) => { const st = new Set(nbY[i]); js.forEach(j => { if (st.has(j)) hit++; }); });
+  // 順位相関 (標本の対)
+  const rnd = mulberry32(5), xs = [], ys = []; for (let m = 0; m < 4000; m++) { const i = Math.floor(rnd() * n), j = Math.floor(rnd() * n); if (i === j) continue; xs.push(D[i][j]); ys.push(d[i][j]); }
+  const rank = v => { const o = v.map((x, i) => i).sort((p, q) => v[p] - v[q]), r = new Float64Array(v.length); o.forEach((i, k2) => { r[i] = k2; }); return r; };
+  const rx = rank(xs), ry = rank(ys), mm = (xs.length - 1) / 2; let sxy = 0, sxx = 0; for (let i = 0; i < xs.length; i++) { sxy += (rx[i] - mm) * (ry[i] - mm); sxx += (rx[i] - mm) ** 2; }
+  return { stress, knn: hit / (n * kk), rho: sxy / sxx, scale: k, xs, ys };
+}
+
+// ============================================================ 計算の段取り
+const NOTE_D = {
+  euc: '3 次元の直線距離．曲面を横切る近道も距離になる．',
+  geo: 'k 近傍のグラフを作り，辺の長さの和の最短路で測る．曲面に沿った距離 (測地距離) の近似．古典的 MDS と組めば Isomap．',
+  diff: 'k 近傍の尺度のガウスの重みでランダムウォークを作り，t 歩進めた分布どうしの違い (Hellinger 距離) を測る．計量的 MDS と組めば PHATE に近い．',
+};
+const NOTE_M = {
+  cmds: 'δ² を二重中心化して内積の行列にし，上位 2 つの固有ベクトルで置く．ユークリッド距離なら PCA と同じ地図．反復はない．',
+  smacof: 'ストレス Σ(d_ij − δ_ij)² を SMACOF (Guttman 変換) の反復で減らす．距離の値そのものを当てる．初期値は古典的 MDS．',
+  sammon: 'Σ(d_ij − δ_ij)² / δ_ij を減らす．小さい δ (近い組) の誤差を重く見る．',
+  nmds: 'δ の大小の順序だけを保つ．地図の距離を単調回帰した値に近づける反復 (Kruskal)．値の目盛りは意味を持たない．',
+  tsne: '近傍の確率 (ガウス) と地図の確率 (t 分布) の KL 情報量を減らす．近傍を保つが，塊の間の距離や大きさは読めない．',
+};
+function recompute() {
+  $('#busy').classList.add('show');
+  setTimeout(() => {
+    const k = clampInt($('#kNN').value, 3, 40, 10), t = clampInt($('#tDiff').value, 1, 64, 8);
+    const E = S.sphere ? greatCircle(S.X) : euclid(S.X);
+    let D, note = NOTE_D[S.dist], nb = knnOf(E, k);
+    if (S.sphere && S.dist === 'euc') note = 'このデータでは「元の距離」を大円の長さ (球面に沿った距離) にしてある．ユークリッドの 2 次元には歪めずには置けない．';
+    if (S.dist === 'euc') D = E;
+    else if (S.dist === 'geo') { const g = geodesic(E, k); D = g.D; nb = g.nb; if (g.broken) note += `　(つながらない組が ${g.broken} 個あり，最大の 1.2 倍にした．k を大きく)`; }
+    else { const g = diffusion(E, k, t); D = g.D; }
+    S.delta = normalizeDelta(D); S.nb = nb;
+    $('#distNote').textContent = note;
+    fit();
+    $('#busy').classList.remove('show');
+  }, 20);
+}
+function fit() {
+  const D = S.delta, c = cmds(D);
+  S.explained = c.explained;
+  const m = S.method;
+  if (m === 'cmds') S.snaps = [c.Y];
+  else if (m === 'smacof') S.snaps = smacof(D, c.Y, 120);
+  else if (m === 'sammon') S.snaps = sammon(D, c.Y, 80);
+  else if (m === 'nmds') S.snaps = nmds(D, c.Y, 120);
+  else S.snaps = tsne(D, c.Y, clampInt($('#perp').value, 5, 80, 30), 600);
+  S.step = S.snaps.length - 1;
+  $('#methodNote').textContent = NOTE_M[m];
+  $('#iterBox').style.display = S.snaps.length > 1 ? '' : 'none';
+  $('#perpBox').style.display = m === 'tsne' ? '' : 'none';
+  $('#iterStep').max = S.snaps.length - 1; $('#iterStep').value = S.step;
+  render(true);
+}
+
+// ============================================================ 距離のグラフ (地図に渡す δ を辺で見せる)
+function edgeSet() {
+  const k = clampInt($('#kShow').value, 1, 20, 6), m = clampInt($('#mAll').value, 10, 80, 40);
+  const key = [S.key, S.dist, S.emode, k, m, $('#kNN').value, $('#tDiff').value].join('|');
+  if (S.ecache && S.ecache.key === key && S.ecache.delta === S.delta) return S.ecache;
+  const D = S.delta, pairs = []; let sub = null;
+  if (S.emode === 'knn') { const seen = new Set(); knnOf(D, k).forEach((js, i) => js.forEach(j => { const a = Math.min(i, j), b = Math.max(i, j), h = a * 100000 + b; if (!seen.has(h)) { seen.add(h); pairs.push([a, b, D[a][b]]); } })); }
+  else { const r = mulberry32(S.seed * 31 + 7), perm = [...D.keys()]; for (let i = perm.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [perm[i], perm[j]] = [perm[j], perm[i]]; } sub = perm.slice(0, Math.min(m, D.length)); for (let u = 0; u < sub.length; u++) for (let v = u + 1; v < sub.length; v++) pairs.push([sub[u], sub[v], D[sub[u]][sub[v]]]); }
+  let lo = Infinity, hi = 0; pairs.forEach(e => { lo = Math.min(lo, e[2]); hi = Math.max(hi, e[2]); });
+  const B = 5, bins = Array.from({ length: B }, () => []);
+  pairs.forEach(e => bins[Math.min(B - 1, Math.floor((hi > lo ? (e[2] - lo) / (hi - lo) : 0) * B))].push(e));
+  S.ecache = { key, delta: D, pairs, sub, bins, k, m };
+  return S.ecache;
+}
+function edgeTraces(es, P, kind) {
+  const B = es.bins.length, out = [];
+  es.bins.forEach((bin, b) => { if (!bin.length) return;
+    const t = b / (B - 1), fa = es.sub ? 1.4 : 1, x = [], y = [], z = [];
+    bin.forEach(([i, j]) => { x.push(P[i][0], P[j][0], null); y.push(P[i][1], P[j][1], null); if (kind === '3d') z.push(P[i][2], P[j][2], null); });
+    const line = { color: mix(css('--e-near'), css('--e-far'), t), width: (kind === '3d' ? 3 : 2.2) - t * (kind === '3d' ? 2 : 1.5) };
+    out.push(kind === '3d' ? { type: 'scatter3d', mode: 'lines', x, y, z, hoverinfo: 'skip', line, opacity: Math.max(.08, .9 - .55 * fa * t) }
+                           : { type: 'scattergl', mode: 'lines', x, y, hoverinfo: 'skip', line, opacity: Math.max(.08, .85 - .5 * fa * t) }); });
+  return out;
+}
+
+// ============================================================ 描画
+function render(reset) {
+  const X = S.X, n = X.length, Y = S.snaps[S.step], sz = clampInt($('#ptSize').value, 2, 14, 6);
+  const cols = X.map((_, i) => pointColor(i)), ids = X.map((_, i) => i);
+  const nbSel = S.sel != null ? knnOf(S.delta, 10)[S.sel] : [];
+  const text = i => `点 ${i + 1}<br>` + (S.kind === 'cat' ? S.cats[S.color[i]] : S.label + ': ' + fmt(S.color[i], 2));
+  // ---- 3 次元
+  const t3 = [], graph = S.view === 'graph', es = graph ? edgeSet() : null;
+  const inSub = es && es.sub ? new Set(es.sub) : null, ptOp = i => (S.sel != null ? .3 : .9) * (inSub && !inSub.has(i) ? .2 : 1);
+  if (graph) t3.push(...edgeTraces(es, X, '3d'));
+  if ($('#showGraph').checked) { const ex = [], ey = [], ez = []; S.nb.forEach((js, i) => js.forEach(j => { if (j > i) { ex.push(X[i][0], X[j][0], null); ey.push(X[i][1], X[j][1], null); ez.push(X[i][2], X[j][2], null); } }));
+    t3.push({ type: 'scatter3d', mode: 'lines', x: ex, y: ey, z: ez, hoverinfo: 'skip', line: { color: css('--edge'), width: 1.5 }, opacity: .7 }); }
+  t3.push({ type: 'scatter3d', mode: 'markers', x: X.map(p => p[0]), y: X.map(p => p[1]), z: X.map(p => p[2]), text: ids.map(text), hovertemplate: '%{text}<extra></extra>',
+    marker: { size: sz * .55, color: inSub ? cols.map((c, i) => inSub.has(i) ? c : css('--edge')) : cols, opacity: inSub ? 1 : (S.sel != null ? .3 : .9) } });
+  const hl = S.sel != null ? [S.sel, ...nbSel] : [];
+  t3.push({ type: 'scatter3d', mode: 'markers', x: hl.map(i => X[i][0]), y: hl.map(i => X[i][1]), z: hl.map(i => X[i][2]), hoverinfo: 'skip',
+    marker: { size: sz * 1.1, color: hl.map(i => cols[i]), line: { color: hl.map((i, k) => k ? css('--nb') : css('--ring')), width: 3 } } });
+  const ax = t => ({ title: { text: t, font: { size: 11, color: css('--text-muted') } }, gridcolor: css('--grid'), zerolinecolor: css('--grid'), tickfont: { size: 10, color: css('--text-muted') }, showspikes: false });
+  const L3 = { paper_bgcolor: css('--surface-1'), font: { color: css('--text-primary') }, margin: { l: 0, r: 0, t: 0, b: 0 }, showlegend: false,
+    scene: { xaxis: ax('x'), yaxis: ax('y'), zaxis: ax('z'), bgcolor: css('--surface-1'), aspectmode: 'data', dragmode: 'orbit' }, uirevision: '3d:' + S.key,
+    hoverlabel: { bgcolor: css('--surface-1'), bordercolor: css('--line'), font: { color: css('--text-primary') } } };
+  if (reset) L3.scene.camera = { eye: { x: 1.5, y: -1.5, z: 1.0 } };
+  Plotly.react('plot3', t3, L3, { responsive: true, displaylogo: false, modeBarButtonsToRemove: ['toImage', 'resetCameraLastSave3d', 'hoverClosest3d'] });
+  // ---- 2 次元
+  const t2 = graph && $('#edgeMap').checked ? edgeTraces(es, Y, '2d') : [];
+  t2.push({ type: 'scattergl', mode: 'markers', x: Y.map(p => p[0]), y: Y.map(p => p[1]), customdata: ids, text: ids.map(text), hovertemplate: '%{text}<extra></extra>',
+    marker: { size: sz, color: inSub ? cols.map((c, i) => inSub.has(i) ? c : css('--edge')) : cols, opacity: S.sel != null ? .35 : .9, line: { width: .5, color: css('--surface-1') } } });
+  t2.push({ type: 'scattergl', mode: 'markers', x: hl.map(i => Y[i][0]), y: hl.map(i => Y[i][1]), hoverinfo: 'skip',
+    marker: { size: sz * 1.6, color: hl.map(i => cols[i]), line: { width: 2.5, color: hl.map((i, k) => k ? css('--nb') : css('--ring')) } } });
+  const ax2 = { gridcolor: css('--grid'), zerolinecolor: css('--grid'), linecolor: css('--line'), tickfont: { size: 10, color: css('--text-muted') } };
+  const L2 = { paper_bgcolor: css('--surface-1'), plot_bgcolor: css('--surface-1'), font: { color: css('--text-primary') }, margin: { l: 40, r: 10, t: 10, b: 30 }, showlegend: false,
+    xaxis: ax2, yaxis: Object.assign({ scaleanchor: 'x', scaleratio: 1 }, ax2), dragmode: 'pan', hovermode: 'closest', uirevision: '2d:' + S.key + S.dist + S.method + (reset ? Math.random() : ''),
+    hoverlabel: L3.hoverlabel };
+  Plotly.react('plot2', t2, L2, { responsive: true, displaylogo: false, scrollZoom: true, modeBarButtonsToRemove: ['toImage', 'lasso2d', 'select2d', 'hoverClosestCartesian', 'hoverCompareCartesian', 'toggleSpikelines'] });
+  if (!S.bound) { S.bound = true; $('#plot2').on('plotly_click', e => { const p = e.points && e.points[0]; if (p && p.customdata != null) { S.sel = p.customdata; render(false); } }); }
+  // ---- 横の欄
+  const M = metrics(S.delta, Y);
+  const m = S.method === 'nmds';
+  const sh = [{ type: 'scattergl', mode: 'markers', x: M.xs, y: M.ys.map(v => v * M.scale), hoverinfo: 'skip', marker: { size: 3, color: css('--accent'), opacity: .35 } }];
+  const mx = Math.max(...M.xs);
+  if (m) { const o = M.xs.map((v, i) => i).sort((a, b) => M.xs[a] - M.xs[b]), fitv = pava(o.map(i => M.ys[i] * M.scale)); sh.push({ type: 'scatter', mode: 'lines', x: o.map(i => M.xs[i]), y: fitv, line: { color: css('--nb'), width: 2 }, hoverinfo: 'skip' }); }
+  else sh.push({ type: 'scatter', mode: 'lines', x: [0, mx], y: [0, mx], line: { color: css('--nb'), width: 1.5, dash: 'dot' }, hoverinfo: 'skip' });
+  Plotly.react('shepard', sh, { paper_bgcolor: css('--surface-1'), plot_bgcolor: css('--surface-1'), margin: { l: 34, r: 6, t: 6, b: 28 }, showlegend: false,
+    xaxis: Object.assign({ title: { text: 'δ', font: { size: 11 } } }, ax2), yaxis: Object.assign({ title: { text: 'd', font: { size: 11 } } }, ax2), font: { color: css('--text-primary') } },
+    { displayModeBar: false, responsive: true, staticPlot: true });
+  $('#metrics').innerHTML = `<tr><td>ストレス (尺度をそろえた後)</td><td>${fmt(M.stress)}</td></tr><tr><td>順位相関 (δ と d)</td><td>${fmt(M.rho)}</td></tr><tr><td>近傍の保存 (10 近傍)</td><td>${fmt(M.knn, 2)}</td></tr>` +
+    `<tr><td>古典的 MDS の上位 2 成分の割合</td><td>${fmt(S.explained, 2)}</td></tr>`;
+  $('#iterLab').textContent = S.snaps.length > 1 ? `${S.step} / ${S.snaps.length - 1}` : '';
+  $('#mapNote').textContent = { cmds: '古典的 MDS', smacof: '計量的 MDS (SMACOF)', sammon: 'Sammon の写像', nmds: '非計量 MDS', tsne: 't-SNE' }[S.method] + ' × ' + { euc: 'ユークリッド', geo: '測地距離', diff: '拡散の距離' }[S.dist] + (S.dist === 'geo' && S.method === 'cmds' ? ' = Isomap' : '');
+  $('#leftName').textContent = graph ? '距離のグラフ' : '3 次元の点';
+  $('#leftNote').textContent = (graph ? (S.emode === 'knn' ? `δ で近い ${es.k} 点との辺 (${es.pairs.length} 本)．地図に渡すのは辺の長さ δ だけ` : `${es.sub.length} 点に間引いて全ての組 (${es.pairs.length} 本)．地図に渡すのは辺の長さ δ だけ`) : '') + (S.sphere ? (graph ? '．' : '') + '元の距離は大円の長さ' : '');
+  $('#edgeBox').style.display = graph ? '' : 'none'; $('#kShowBox').style.display = S.emode === 'knn' ? '' : 'none'; $('#mAllBox').style.display = S.emode === 'all' ? '' : 'none';
+}
+
+// ============================================================ 操作
+$$('#distSeg button').forEach(b => b.onclick = () => { S.dist = b.dataset.d; $$('#distSeg button').forEach(x => x.classList.toggle('on', x === b)); recompute(); });
+$$('#methodSeg button').forEach(b => b.onclick = () => { S.method = b.dataset.m; $$('#methodSeg button').forEach(x => x.classList.toggle('on', x === b)); $('#busy').classList.add('show'); setTimeout(() => { fit(); $('#busy').classList.remove('show'); }, 20); });
+$('#dataset').onchange = setData; $('#nPts').onchange = setData; $('#noise').onchange = setData;
+$('#regen').onclick = () => { S.seed++; setData(); };
+$('#kNN').onchange = recompute; $('#tDiff').onchange = recompute;
+$('#perp').onchange = () => { if (S.method === 'tsne') { $('#busy').classList.add('show'); setTimeout(() => { fit(); $('#busy').classList.remove('show'); }, 20); } };
+$$('#viewSeg button').forEach(b => b.onclick = () => { S.view = b.dataset.v; $$('#viewSeg button').forEach(x => x.classList.toggle('on', x === b)); render(false); });
+$$('#edgeSeg button').forEach(b => b.onclick = () => { S.emode = b.dataset.e; $$('#edgeSeg button').forEach(x => x.classList.toggle('on', x === b)); render(false); });
+$('#kShow').onchange = () => render(false); $('#mAll').onchange = () => render(false); $('#edgeMap').onchange = () => render(false);
+$('#showGraph').onchange = () => render(false); $('#ptSize').onchange = () => render(false);
+$('#iterStep').oninput = e => { S.playing++; S.step = +e.target.value; render(false); };
+$('#iterPlay').onclick = () => { const id = ++S.playing; S.step = 0; const tick = () => { if (id !== S.playing) return; S.step = Math.min(S.snaps.length - 1, S.step + 1); $('#iterStep').value = S.step; render(false); if (S.step < S.snaps.length - 1) setTimeout(() => requestAnimationFrame(tick), 30); }; tick(); };
+addEventListener('keydown', e => { if (e.key === 'Escape') { S.sel = null; render(false); } });
+$('#themeBtn').onclick = () => { const dk = getComputedStyle(document.documentElement).colorScheme === 'dark'; document.documentElement.dataset.theme = dk ? 'light' : 'dark'; render(false); };
+// ?data=swiss&dist=geo&method=cmds で開く (スライドの iframe 用)
+const q = new URLSearchParams(location.search);
+if (q.get('data')) $('#dataset').value = q.get('data');
+if (q.get('dist')) { S.dist = q.get('dist'); $$('#distSeg button').forEach(x => x.classList.toggle('on', x.dataset.d === S.dist)); }
+if (q.get('view')) { S.view = q.get('view'); $$('#viewSeg button').forEach(x => x.classList.toggle('on', x.dataset.v === S.view)); }
+if (q.get('edges')) { S.emode = q.get('edges'); $$('#edgeSeg button').forEach(x => x.classList.toggle('on', x.dataset.e === S.emode)); }
+if (q.get('method')) { S.method = q.get('method'); $$('#methodSeg button').forEach(x => x.classList.toggle('on', x.dataset.m === S.method)); }
+setData();
+// スライドに埋め込むとき (?embed．embed.js) の段: 頁送りで状態を替える (各段は状態をまるごと決めるので戻っても同じ)
+const MDS_STEPS = [
+  { data: 'scurve', dist: 'euc', method: 'cmds', edges: 'knn', cap: 'S 字の曲面: ユークリッド距離 δ を古典的 MDS で置く (= PCA)．色が重なる' },
+  { data: 'scurve', dist: 'geo', method: 'cmds', edges: 'knn', cap: '曲面に沿った距離 (近傍グラフの最短路) にすると開ける (Isomap)' },
+  { data: 'blobs', dist: 'euc', method: 'cmds', edges: 'all', cap: '球面の上の 4 つの塊: 古典的 MDS は大域の配置を保つ' },
+  { data: 'blobs', dist: 'euc', method: 'tsne', edges: 'all', cap: 't-SNE: 塊ははっきり分かれるが，塊の間の距離と大きさは保たない' },
+];
+let mdsK = 0;
+function mdsApply(k) {
+  mdsK = k; const s = MDS_STEPS[k];
+  $('#dataset').value = s.data; S.dist = s.dist; S.method = s.method; S.emode = s.edges;
+  $$('#distSeg button').forEach(x => x.classList.toggle('on', x.dataset.d === S.dist));
+  $$('#methodSeg button').forEach(x => x.classList.toggle('on', x.dataset.m === S.method));
+  $$('#edgeSeg button').forEach(x => x.classList.toggle('on', x.dataset.e === S.emode));
+  if (window.embedCaption) window.embedCaption(s.cap);
+  setData();
+}
+window.demoSteps = {
+  next: () => mdsK < MDS_STEPS.length - 1 ? (mdsApply(mdsK + 1), true) : false,
+  prev: () => mdsK > 0 ? (mdsApply(mdsK - 1), true) : false,
+  start: () => mdsApply(0), end: () => mdsApply(MDS_STEPS.length - 1),
+};
+</script>
+<script>window.XP_SRC = [['#colorNote', 'データ'], ['#distNote', '① 距離の定義'], ['#methodNote', '② 当てはめ方'], ['#metrics', '当てはまり'], ['#leftNote', '左の図'], ['#mapNote', '右の地図']];</script>
+<style>
+#xpBtn { font: inherit; color: var(--text-primary); background: var(--surface-1); border: 1px solid var(--line); border-radius: 6px; padding: 3px 10px; cursor: pointer; }
+.xp-src { cursor: zoom-in; }
+#xpOv { position: fixed; inset: 0; z-index: 9999; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,.45); }
+#xpOv.show { display: flex; }
+#xpBox { background: var(--surface-1); color: var(--text-primary); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,.35);
+  width: min(92vw, 1100px); max-height: 88vh; overflow: auto; padding: 18px 26px 22px; position: relative; }
+#xpBox .xp-body { zoom: 1.7; line-height: 1.6; }
+#xpBox .xp-sec + .xp-sec { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--line); }
+#xpBox .xp-h { font-size: 11px; color: var(--text-muted); margin-bottom: 2px; }
+#xpBox .xp-close { position: absolute; top: 8px; right: 12px; font-size: 20px; line-height: 1; border: 0; background: none; color: var(--text-muted); cursor: pointer; }
+#xpBox .xp-hint { margin-top: 12px; font-size: 12px; color: var(--text-muted); }
+</style>
+<div id="xpOv"><div id="xpBox"><button class="xp-close" title="閉じる (Esc)">×</button><div class="xp-body" id="xpBody"></div>
+<div class="xp-hint">説明を大きく表示 (i または Esc で閉じる．← → の操作はそのまま効く)</div></div></div>
+<script>/* 説明の拡大表示: XP_SRC に並べた要素の中身を大きな窓に写す */
+(function () {
+  var SRC = window.XP_SRC || [], ov = document.getElementById('xpOv'), body = document.getElementById('xpBody'), obs = null;
+  function els() { var out = []; SRC.forEach(function (s) { document.querySelectorAll(s[0]).forEach(function (e) { out.push([e, s[1]]); }); }); return out; }
+  function visible(e) { return e.offsetParent !== null && e.textContent.trim() !== ''; }
+  function fill() {
+    body.innerHTML = '';
+    els().forEach(function (p) { if (!visible(p[0])) return;
+      var sec = document.createElement('div'); sec.className = 'xp-sec';
+      if (p[1]) { var h = document.createElement('div'); h.className = 'xp-h'; h.textContent = p[1]; sec.append(h); }
+      var c = p[0].cloneNode(true); c.removeAttribute('id'); c.querySelectorAll('[id]').forEach(function (x) { x.removeAttribute('id'); });
+      c.querySelectorAll('input,select,button,textarea').forEach(function (x) { x.remove(); });
+      c.classList.remove('xp-src'); c.style.maxHeight = 'none'; c.style.overflow = 'visible'; c.style.border = '0'; c.style.cursor = 'auto';
+      sec.append(c); body.append(sec); });
+    if (!body.children.length) body.textContent = '(この場面の説明はありません)';
+  }
+  function open() { fill(); ov.classList.add('show');
+    obs = new MutationObserver(function () { clearTimeout(obs.t); obs.t = setTimeout(fill, 60); });
+    els().forEach(function (p) { obs.observe(p[0], { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['style', 'class'] }); }); }
+  function close() { ov.classList.remove('show'); if (obs) obs.disconnect(); obs = null; }
+  function toggle() { ov.classList.contains('show') ? close() : open(); }
+  var b = document.createElement('button'); b.id = 'xpBtn'; b.textContent = '説明 ⤢'; b.title = '説明を大きく表示 (i)'; b.onclick = toggle;
+  var tb = document.getElementById('themeBtn'); if (tb) tb.before(b); else document.body.append(b);
+  ov.addEventListener('click', function (e) { if (e.target === ov || e.target.classList.contains('xp-close')) close(); });
+  addEventListener('keydown', function (e) {
+    var tag = (e.target.tagName || '').toLowerCase(); if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+    if (e.key === 'i' && !e.metaKey && !e.ctrlKey && !e.altKey) { toggle(); e.preventDefault(); }
+    else if (e.key === 'Escape' && ov.classList.contains('show')) { close(); e.stopImmediatePropagation(); }
+  }, true);
+  els().forEach(function (p) { p[0].classList.add('xp-src'); p[0].title = p[0].title || 'クリックで説明を大きく表示'; });
+  document.addEventListener('click', function (e) {
+    if (ov.contains(e.target) || e.target.closest('button,input,select,a,label,svg,canvas,textarea,.js-plotly-plot')) return;
+    if (e.target.closest('.xp-src')) open();
+  });
+})();</script>
+<script src="embed.js"></script>
+</body>
+</html>

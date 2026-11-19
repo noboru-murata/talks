@@ -1,0 +1,16 @@
+# 主題の情報．講演の原本の meta.yml から publish.mk (make publish) が作る．
+title: 汎化誤差の評価
+subtitle: 上界の系譜と関数空間からの見方
+lang: ja
+authors:
+- name: 村田 昇
+abstract: 'ニューラルネットワークはパラメタの数が観測の数を大きく上回っても汎化する． この現象を説明しようとしてきた汎化誤差の上界 (VC 次元，統計的漸近論，Rademacher 複雑度， ノルムに基づく上界，PAC-Bayes) の系譜をたどり，その限界を確かめる．後半では， 無限幅の 2 層ネットワークの積分表現から現れる関数空間 (Barron 空間，変分空間，Radon 領域の有界変動) を通して， 近似誤差と推定誤差を同じ言葉で書き，関数空間論に向けた問いを挙げる．
+
+  '
+license: CC-BY-NC-4.0
+publish:
+  notes: false
+  figures_cleared: true
+items: []
+id: generalization-bound
+updated: 2026-11-19
