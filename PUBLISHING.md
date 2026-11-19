@@ -111,6 +111,7 @@ include $(OXQ)/tools/talk.mk
 
 - `*_FILES` は「元のパス (Makefile から見た相対パス)=公開側のパス」の並び．
   `PUB_FILES` の右側は主題のフォルダから，`PUB_EDITION_FILES` の右側は版のフォルダから見たパス．
+- 主題の部分に置くものがまだ無ければ `PUB_FILES :=` (空) でよい (原本の meta.yml は `items: []`)．主題は meta.yml と頁だけになり，版は今までどおり出せる (2026-11-19)．
 - 原本のファイル名は講演の型の一般名 (slide.org → slide.html，companion，`_meta/handoff-talks.md` の「ファイルの名前」)．公開側の名前は右側で決める．
 - `PUB_ROOT` は書かなくてよい (既定は ox-quarto と同じ階層の talks)．別の場所なら `PUB_ROOT := …`．
 - `PUB_EDITION` はいま作っている版だけ．次の講演では書き換える (過去の版の元ファイルは要らない)．
