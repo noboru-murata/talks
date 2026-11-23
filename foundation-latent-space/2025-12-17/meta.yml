@@ -3,6 +3,7 @@
 edition: '2025-12-17'
 topic: foundation-latent-space
 title: 基盤モデルの作る潜在空間の性質
+subtitle: 情報幾何の枠組で潜在変数の分布を考える
 date: 2025-12-17
 venue: RIMS 共同研究 (公開型)「関数空間論とその周辺」(京都大学数理解析研究所)
 kind: 講演
@@ -18,3 +19,6 @@ publish:
   notes: false
   figures_cleared: true
 published: 2026-11-23
+revisions:
+- date: 2026-11-23
+  note: サブタイトルを改めた

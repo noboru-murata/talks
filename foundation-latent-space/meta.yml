@@ -1,5 +1,6 @@
 # 主題の情報．講演の原本の meta.yml から publish.mk (make publish) が作る．
 title: 基盤モデルの作る潜在空間の性質
+subtitle: 情報幾何の枠組で潜在変数の分布を考える
 lang: ja
 authors:
 - name: 村田 昇

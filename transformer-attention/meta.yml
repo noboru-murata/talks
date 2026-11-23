@@ -1,6 +1,6 @@
 # 主題の情報．講演の原本の meta.yml から publish.mk (make publish) が作る．
 title: Transformer における attention 機構の仕組み
-subtitle: 情報の流れを見る
+subtitle: attention block と MLP block の情報の流れを見る
 lang: ja
 authors:
 - name: 村田 昇

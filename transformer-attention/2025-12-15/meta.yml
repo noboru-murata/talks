@@ -3,7 +3,7 @@
 edition: '2025-12-15'
 topic: transformer-attention
 title: Transformer における attention 機構の仕組み
-subtitle: 情報の流れを見る
+subtitle: attention block と MLP block の情報の流れを見る
 date: 2025-12-15
 venue: RIMS 共同研究 (公開型)「関数空間論とその周辺」(京都大学数理解析研究所)
 kind: 講演
@@ -22,3 +22,6 @@ publish:
   notes: false
   figures_cleared: true
 published: 2026-11-23
+revisions:
+- date: 2026-11-23
+  note: サブタイトルを改めた
