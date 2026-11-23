@@ -3,7 +3,7 @@
 edition: '2026-10-19'
 topic: physics-informed-ml
 title: 物理を組み込む機械学習
-subtitle: データ・正則化・仮説空間に物理を入れる
+subtitle: 鉄鋼プロセスへの応用に向けて
 date: 2026-10-19
 venue: 第34回鉄鋼工学アドバンストセミナー
 kind: 基調講演
@@ -34,3 +34,5 @@ published: 2026-10-15
 revisions:
 - date: 2026-10-20
   note: 11 頁の改行の誤植 (\ が表示されていた) を直した
+- date: 2026-11-23
+  note: 版の副題を講演のときのもの (鉄鋼プロセスへの応用に向けて) にした
