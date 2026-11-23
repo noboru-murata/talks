@@ -1,0 +1,19 @@
+# 主題の情報．講演の原本の meta.yml から publish.mk (make publish) が作る．
+title: Transformer における attention 機構の仕組み
+subtitle: 情報の流れを見る
+lang: ja
+authors:
+- name: 村田 昇
+abstract: 'Transformer モデルは，Multi-Head Attention (MHA) と Multi-Layer Perceptron (MLP) の組み合わせで構成され， MHA はトークン間の複雑な関係を捉え，MLP は非線形性を導入することで表現力を高めている． Transformer の内部処理を理解するための方法の一つとして，Integrated Gradients (IG) と Layer-wise Relevance Propagation (LRP) を組み合わせた解釈手法を紹介する．
+
+  '
+license: CC-BY-NC-4.0
+publish:
+  notes: false
+  figures_cleared: true
+items:
+- kind: report-pdf
+  path: report/transformer-attention-preprint.pdf
+  label: プレプリント (村田・鈴木．数理解析研究所講究録 2353 (2025)，pp. 194–205)
+id: transformer-attention
+updated: 2026-11-23

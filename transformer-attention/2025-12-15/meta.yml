@@ -1,0 +1,24 @@
+# 講演の版の情報．講演の原本の meta.yml (editions) から publish.mk (make publish-edition) が作る．
+# 講演の日の翌日から固定 (talks/PUBLISHING.md)．
+edition: '2025-12-15'
+topic: transformer-attention
+title: Transformer における attention 機構の仕組み
+subtitle: 情報の流れを見る
+date: 2025-12-15
+venue: RIMS 共同研究 (公開型)「関数空間論とその周辺」(京都大学数理解析研究所)
+kind: 講演
+items:
+- kind: slides
+  path: talk/transformer-attention.pdf
+  label: スライド (PDF)
+- kind: report-pdf
+  path: talk/transformer-attention-abstract.pdf
+  label: アブスト (PDF)
+- kind: slides
+  path: talk/transformer-attention-tsp.pdf
+  label: '補足: Transformer による TSP の解法 (PDF)'
+license: CC-BY-NC-4.0
+publish:
+  notes: false
+  figures_cleared: true
+published: 2026-11-23

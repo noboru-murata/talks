@@ -1,0 +1,18 @@
+# 主題の情報．講演の原本の meta.yml から publish.mk (make publish) が作る．
+title: 基盤モデルの作る潜在空間の性質
+lang: ja
+authors:
+- name: 村田 昇
+abstract: '事前学習された基盤モデルが生成する特徴量を，指数型分布族の期待値パラメタとして捉える視点から考察する． 情報幾何の枠組みを用いて，基盤モデルが構成する分布族の Fisher 計量，接続，曲率といった幾何的性質を議論する．
+
+  '
+license: CC-BY-NC-4.0
+publish:
+  notes: false
+  figures_cleared: true
+items:
+- kind: report-pdf
+  path: report/foundation-latent-space-preprint.pdf
+  label: プレプリント (村田・赤塚．数理解析研究所講究録 2353 (2025)，pp. 206–215)
+id: foundation-latent-space
+updated: 2026-11-23
