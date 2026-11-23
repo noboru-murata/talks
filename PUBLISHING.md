@@ -81,6 +81,12 @@ push すると 1〜2 分で反映される．
   - ファイルの追加・削除・改名はできない (URL を変えないため)．並びが変われば止まる．
   - 理由は版の `meta.yml` の `revisions` に記録され，版の頁に「訂正の記録」として出る．
 - 内容を足したい・作り直したいときは，主題の部分 (`make publish`) に加筆するか，次の講演の版にする．
+- **講演の後に初めて出す版** (過去の講演の資料を後から公開する) も同じ道具で出せる．公開側に版がまだ無ければ固定の判定はせずに写し，
+  版の `published` はその日になる (頁には講演の日と公開の日が並ぶので，特別な印は付けない)．写した時点で講演の日を過ぎているので，
+  **その場で固定**される．出す前に主題を `make publish` で作り，`make publish-edition-check` で中身を確かめてから `make publish-edition` する
+  (2026-11-23．transformer-attention と foundation-latent-space)．
+- スライドを PDF (beamer など) で出してもよい (`kind: slides` で path が `.pdf`)．発表者ノートの照合は `kind: handout` の PDF と
+  items に無い PDF だけに掛かる．
 - 権利上の理由でファイルそのものを消さなければならないときは，手で talks から消して commit し，
   消した理由を commit の文に書く (例外中の例外)．
 
